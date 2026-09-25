@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>BOXMUSIC.EXE - Retro Music Player</title>
+  
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1e40af">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Boxmusic">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+  <link rel="apple-touch-icon" href="/icons/icon.svg">
+
+  <!-- Retro Pixel Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/app.css?v=4.0">
+</head>
+<body class="retro-body">
+  <div id="app">
+
+    <!-- ========================================================
+         INTRO SPLASH: RETRO BOOT & MUSIC BOX ZOOM SEQUENCE
+         ======================================================== -->
+    <div id="intro-splash" class="intro-splash-screen">
+      <!-- 3D Cinematic Hyperspace Dive Canvas -->
+      <canvas id="dive-canvas-3d" class="dive-canvas-3d"></canvas>
+
+      <!-- Top Segmented Blue Retro Loading Bar -->
+      <div class="intro-loader-wrap">
+        <div class="intro-segmented-bar">
+          <div class="seg-block filled"></div>
+          <div class="seg-block filled"></div>
+          <div class="seg-block filled"></div>
+          <div class="seg-block filled"></div>
+          <div class="seg-block filled"></div>
+          <div class="seg-block filled"></div>
+          <div class="seg-block filled"></div>
+          <div class="seg-block filled"></div>
+          <div class="seg-block filled"></div>
+          <div class="seg-block filled"></div>
+          <div class="seg-block" id="seg-dynamic"></div>
+          <div class="seg-block"></div>
+        </div>
+        <div id="intro-loading-text" class="intro-loading-title">LOADING...</div>
+      </div>
+
+      <!-- Main Retro OS Window (LANDSCAPE / BOXMUSIC.EXE) -->
+      <div class="retro-main-window" id="intro-window">
+        <!-- Blue Title Bar with Install & Skip Icons -->
+        <div class="retro-title-bar">
+          <div class="retro-title-text">
+            <span class="pixel-icon-disk">💾</span> BOXMUSIC.EXE
+          </div>
+          <div class="retro-window-controls">
+            <button class="win-btn-install-head" id="intro-install-btn" type="button" title="Cài ứng dụng về máy">
+              <span>🤖 CÀI ANDROID</span>
+            </button>
+            <button class="win-btn-red" id="intro-skip-btn" type="button" aria-label="Skip" title="Bỏ qua intro">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M7 14l5-5 5 5z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Window Inner Canvas -->
+        <div class="retro-window-canvas" id="intro-canvas">
+          <!-- Pixel Clouds & Sky Background -->
+          <div class="pixel-sky-art"></div>
+
+          <!-- Pixel Sparkles & Floating Stars -->
+          <div class="pixel-sparkles">
+            <span class="p-star s1">✦</span>
+            <span class="p-star s2">★</span>
+            <span class="p-star s3">✦</span>
+          </div>
+
+          <!-- Floating Pixel Mouse Cursors -->
+          <div class="pixel-cursor c1"></div>
+          <div class="pixel-cursor c2"></div>
+          <div class="pixel-cursor c3"></div>
+
+          <!-- Pixel Hearts Floating -->
+          <div class="pixel-heart-cluster">
+            <span class="p-heart h1">♥</span>
+            <span class="p-heart h2">♥</span>
+          </div>
+
+          <!-- Retro Gamepad Icon in sky -->
+          <div class="pixel-gamepad">🎮</div>
+
+          <!-- THE RETRO 3D PIXEL MUSIC BOX STAGE -->
+          <div class="intro-box-showcase" id="intro-box-container">
+            <div class="music-box-aura" id="music-box-aura"></div>
+            
+            <!-- Hyperspace 3D Warp Portal Light Tunnel -->
+            <div class="box-warp-tunnel" id="warp-tunnel">
+              <div class="tunnel-beam b1"></div>
+              <div class="tunnel-beam b2"></div>
+              <div class="tunnel-beam b3"></div>
+              <div class="tunnel-beam b4"></div>
+            </div>
+
+            <!-- 3D Perspective Music Box Wrapper -->
+            <div class="box-stage-3d" id="box-stage-3d">
+              <div class="pixel-music-box" id="pixel-music-box" title="Chạm để mở Hộp Nhạc">
+                <!-- 3D Lid with Hinge Transform -->
+                <div class="box-lid" id="box-lid">
+                  <div class="lid-top-rim"></div>
+                  <div class="lid-handle"></div>
+                </div>
+
+                <!-- 3D Interior & Music Mechanism with Glowing Chimes -->
+                <div class="box-interior" id="box-interior">
+                  <div class="music-core-light" id="core-light"></div>
+                  <div class="music-cylinder">
+                    <span class="cyl-dot d1"></span>
+                    <span class="cyl-dot d2"></span>
+                    <span class="cyl-dot d3"></span>
+                  </div>
+                  <div class="floating-pixel-notes" id="box-notes-cluster">
+                    <span class="p-note n1">♪</span>
+                    <span class="p-note n2">♫</span>
+                    <span class="p-note n3">♬</span>
+                    <span class="p-note n4">✦</span>
+                    <span class="p-note n5">★</span>
+                  </div>
+                </div>
+
+                <!-- Box Wooden Body with Corner Plates -->
+                <div class="box-body">
+                  <div class="box-lock-plate">
+                    <div class="keyhole"></div>
+                  </div>
+                  <div class="box-corner c-tl"></div>
+                  <div class="box-corner c-tr"></div>
+                  <div class="box-corner c-bl"></div>
+                  <div class="box-corner c-br"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Iconic Retro Green [ START ] Button -->
+          <div class="start-btn-wrap" id="start-btn-wrap">
+            <button id="btn-intro-start" class="btn-retro-start" type="button">
+              <span>START</span>
+            </button>
+            <!-- Hand Cursor clicking the button -->
+            <div class="pixel-hand-cursor"></div>
+          </div>
+
+          <!-- Retro Warning Dialog (like in the picture) -->
+          <div class="retro-warning-dialog" id="intro-warning">
+            <div class="warning-title-bar">
+              <span>WARNING</span>
+              <span class="warning-x">✕</span>
+            </div>
+            <div class="warning-body">
+              <p>ENTER MUSIC WORLD ?</p>
+              <div class="warning-btns">
+                <button class="win-btn-gray active" id="btn-warn-yes" type="button">Yes</button>
+                <button class="win-btn-gray" id="btn-warn-no" type="button">No</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Retro Yellow Folder with Heart in bottom right -->
+          <div class="pixel-folder-badge">
+            <div class="folder-heart-bubble">♥</div>
+            <div class="folder-tab"></div>
+            <div class="folder-body">
+              <div class="folder-icon-music">♫</div>
+            </div>
+          </div>
+
+          <!-- Pixel Blue Heart -->
+          <div class="pixel-blue-heart">💙</div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ========================================================
+         MAIN RETRO APPLICATION INTERFACE
+         ======================================================== -->
+
+    <!-- Retro Desktop Header -->
+    <header class="app-header retro-os-header">
+      <div class="retro-os-brand">
+        <div class="os-icon">💾</div>
+        <div class="os-title-col">
+          <span class="os-window-name">BOXMUSIC.EXE</span>
+          <span id="greeting-time" class="os-substatus">HỆ THỐNG OFFLINE V1.0</span>
+        </div>
+      </div>
+      <div class="header-actions-row">
+        <a href="/downloads/Boxmusic-Pro.apk" download="Boxmusic-Pro.apk" id="btn-install-android" class="btn-os-install" style="text-decoration:none;" title="Tải file APK cho Android">
+          <span class="icon">📥</span>
+          <span>TẢI FILE APK</span>
+        </a>
+        <button id="btn-replay-intro" class="btn-os-replay" type="button" title="Xem lại intro mở hộp">
+          <span>📼 MỞ HỘP</span>
+        </button>
+        <div id="network-badge" class="network-badge online">
+          <span class="dot"></span>
+          <span id="network-status-text">ONLINE</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- TAB 1: THƯ VIỆN OFFLINE -->
+      <section id="library-view" class="view-panel active">
+        <!-- Retro Android Install Banner -->
+        <div class="retro-install-banner" id="retro-install-banner">
+          <div class="install-banner-left">
+            <div class="install-banner-icon">📦</div>
+            <div class="install-banner-text">
+              <div class="install-title">CÀI ĐẶT BOXMUSIC CHO ANDROID</div>
+              <div class="install-sub">Đã đóng gói file APK chính thức để tải về và cài trực tiếp vào máy</div>
+            </div>
+          </div>
+          <a href="/downloads/Boxmusic-Pro.apk" download="Boxmusic-Pro.apk" class="btn-install-action" style="text-decoration:none; display:inline-flex; align-items:center;">
+            <span>TẢI APK NGAY 📥</span>
+          </a>
+        </div>
+
+        <!-- Retro Window Container for Library -->
+        <div class="retro-window-box">
+          <div class="retro-window-header-sm">
+            <span>📁 C:\MUSIC\LIBRARY</span>
+            <span id="storage-stats" class="win-counter">0 BÀI • 0 MB</span>
+          </div>
+          <div class="retro-window-inner">
+            <div class="library-top-bar">
+              <button id="btn-import-file" class="btn-retro-pill primary" type="button">
+                <span class="icon">📂</span>
+                <span>+ THÊM TỆP MP3/MP4</span>
+              </button>
+              <input type="file" id="local-file-input" accept="audio/*,video/mp4,video/x-m4v" multiple style="display: none;">
+            </div>
+
+            <!-- Retro Filter Tabs -->
+            <div class="filter-pills retro-tabs">
+              <button class="filter-pill active" data-filter="all">TẤT CẢ</button>
+              <button class="filter-pill" data-filter="favorite">♥ YÊU THÍCH</button>
+              <button class="filter-pill" data-filter="youtube">YOUTUBE</button>
+              <button class="filter-pill" data-filter="local">MÁY</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Offline Song List -->
+        <div id="library-song-list" class="song-list">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Empty state when no songs -->
+        <div id="library-empty" class="empty-state retro-empty" style="display: none;">
+          <div class="empty-retro-art">📻</div>
+          <div class="empty-title">CHƯA CÓ BÀI HÁT</div>
+          <div class="empty-desc">Nhấp <b>TÌM KIẾM</b> để tải nhạc thế giới hoặc bấm <b>+ THÊM TỆP</b> để nạp bài hát offline.</div>
+        </div>
+      </section>
+
+      <!-- TAB 2: TÌM KIẾM THẾ GIỚI -->
+      <section id="search-view" class="view-panel">
+        <div class="retro-window-box">
+          <div class="retro-window-header-sm">
+            <span>🌐 C:\INTERNET\SEARCH.EXE</span>
+            <span class="win-counter">WORLD MUSIC</span>
+          </div>
+          <div class="retro-window-inner">
+            <div class="search-bar-wrap retro-search">
+              <span class="search-icon-left">🔍</span>
+              <input type="search" id="search-input" class="search-input retro-input" placeholder="TÌM BÀI HÁT, CA SĨ TOÀN CẦU..." autocomplete="off">
+              <button id="search-clear-btn" class="search-clear-btn" type="button">✕</button>
+            </div>
+
+            <!-- Genre Suggestion Chips -->
+            <div class="genre-chips-wrap">
+              <div class="genre-chips-label">CHỦ ĐỀ GỢI Ý:</div>
+              <div class="genre-chips-scroll">
+                <button class="genre-chip" data-query="Nhạc trẻ V-Pop thịnh hành">★ V-POP HOT</button>
+                <button class="genre-chip" data-query="Lofi chill beats study sleep">☕ LOFI CHILL</button>
+                <button class="genre-chip" data-query="US UK top hits billboard">🎸 US-UK HITS</button>
+                <button class="genre-chip" data-query="Acoustic guitar nhẹ nhàng">🍃 ACOUSTIC</button>
+                <button class="genre-chip" data-query="EDM remix sôi động">⚡ REMIX BASS</button>
+                <button class="genre-chip" data-query="Nhạc piano thư giãn không lời">🎹 PIANO CHILL</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="search-loading" class="empty-state retro-empty" style="display: none;">
+          <div class="retro-spinner"></div>
+          <div class="empty-desc" style="margin-top: 12px;">ĐANG KẾT NỐI VÀ TẢI DỮ LIỆU...</div>
+        </div>
+
+        <div id="search-offline-notice" class="empty-state retro-empty" style="display: none;">
+          <div class="empty-retro-art">📡</div>
+          <div class="empty-title">NGOẠI TUYẾN</div>
+          <div class="empty-desc">Cần kết nối Wi-Fi hoặc 4G để tìm kiếm bài mới. Bạn vẫn có thể nghe các bài đã lưu tại Thư viện.</div>
+        </div>
+
+        <!-- Search Results List -->
+        <div id="search-results-list" class="song-list">
+          <!-- Dynamically populated -->
+        </div>
+
+        <div id="search-placeholder" class="empty-state retro-empty">
+          <div class="empty-retro-art">🔍</div>
+          <div class="empty-title">TÌM NHẠC TOÀN CẦU</div>
+          <div class="empty-desc">Nhập tên bài hát hoặc chọn một chủ đề phía trên để tải về nghe không cần mạng.</div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- FLOATING RETRO MINI PLAYER -->
+    <div id="mini-player" class="mini-player-retro hidden">
+      <div class="mini-progress-bar">
+        <div id="mini-progress-fill" class="mini-progress-fill"></div>
+      </div>
+      <div class="mini-content-row" id="mini-info-click">
+        <div class="mini-thumb-wrap">
+          <img id="mini-thumb" class="mini-thumb" src="/icons/icon.svg" alt="Cover">
+          <div class="pixel-mini-badge">▶</div>
+        </div>
+        <div class="mini-info">
+          <div id="mini-title" class="mini-title">Tên bài hát</div>
+          <div class="mini-subrow">
+            <div class="mini-eq" id="mini-eq">
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+            </div>
+            <div id="mini-artist" class="mini-artist">Nghệ sĩ</div>
+          </div>
+        </div>
+      </div>
+      <div class="mini-controls">
+        <button id="mini-btn-play" class="btn-retro-square" type="button" aria-label="Play/Pause">
+          <span id="mini-play-icon">▶</span>
+        </button>
+        <button id="mini-btn-next" class="btn-retro-square" type="button" aria-label="Next">
+          <span>⏭</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- RETRO BOTTOM NAVIGATION BAR -->
+    <nav class="bottom-nav retro-dock">
+      <button class="nav-item active" data-tab="library-view" type="button">
+        <div class="nav-icon-wrap">📁</div>
+        <span>THƯ VIỆN</span>
+      </button>
+      <button class="nav-item" data-tab="search-view" type="button">
+        <div class="nav-icon-wrap">🔍</div>
+        <span>TÌM KIẾM</span>
+      </button>
+    </nav>
+
+    <!-- ========================================================
+         RETRO FULL SCREEN NOW PLAYING WINDOW
+         ======================================================== -->
+    <div id="full-player" class="full-player-modal retro-player-modal">
+      <!-- Window Title Bar -->
+      <div class="retro-title-bar player-win-bar">
+        <div class="retro-title-text">
+          <span class="pixel-icon-disk">📻</span> NOW_PLAYING.EXE
+        </div>
+        <div class="retro-window-controls">
+          <button id="btn-toggle-art-mode" class="win-btn-gray-sm" type="button" title="Đổi kiểu hiển thị">
+            <span id="art-mode-text">DISC 💿</span>
+          </button>
+          <button id="btn-close-player" class="win-btn-red" type="button" aria-label="Close">✕</button>
+        </div>
+      </div>
+
+      <!-- Ambient Dynamic Glow Backdrop -->
+      <div id="player-glow" class="player-glow"></div>
+
+      <!-- Artwork Showcase: Switchable Card / Vinyl -->
+      <div class="album-art-wrap retro-art-frame">
+        <!-- MODE 1: Retro Pixel Frame Card -->
+        <div id="retro-card-view" class="retro-card-container">
+          <div class="retro-art-border">
+            <img id="player-art" class="retro-big-card-art" src="/icons/icon.svg" alt="Album Art">
+            <div class="retro-art-glare"></div>
+          </div>
+        </div>
+
+        <!-- MODE 2: Retro Vinyl Disc -->
+        <div id="retro-vinyl-view" class="vinyl-container" style="display: none;">
+          <div class="vinyl-disc" id="vinyl-disc">
+            <div class="vinyl-shine"></div>
+            <div class="vinyl-groove-lines"></div>
+            <div class="vinyl-center">
+              <img id="player-art-vinyl" class="album-art" src="/icons/icon.svg" alt="Album Art">
+              <div class="vinyl-hole"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Retro LED Spectrum Visualizer Canvas -->
+      <div class="visualizer-container retro-vis-box">
+        <div class="vis-header-tag">8-BIT STEREO ANALYZER</div>
+        <canvas id="player-visualizer" class="player-visualizer"></canvas>
+      </div>
+
+      <!-- Title & Artist -->
+      <div class="player-meta retro-meta">
+        <div class="player-titles-wrap">
+          <div id="player-title" class="player-song-title">Tên bài hát</div>
+          <div id="player-artist" class="player-song-artist">Nghệ sĩ</div>
+        </div>
+        <button id="player-btn-fav" class="btn-retro-fav" type="button" aria-label="Favorite">
+          <span class="fav-heart-icon">♥</span>
+        </button>
+      </div>
+
+      <!-- Scrubber -->
+      <div class="scrubber-wrap retro-scrubber">
+        <input type="range" id="player-slider" class="scrubber-slider" min="0" max="100" value="0" step="0.1">
+        <div class="time-row">
+          <span id="player-time-current">0:00</span>
+          <span class="retro-stereo-pill">STEREO</span>
+          <span id="player-time-total">0:00</span>
+        </div>
+      </div>
+
+      <!-- Retro Player Controls Bar -->
+      <div class="player-controls retro-controls">
+        <!-- Shuffle -->
+        <button id="player-btn-shuffle" class="btn-ctrl-retro" type="button" aria-label="Shuffle" title="Trộn bài">
+          <span>🔀</span>
+        </button>
+
+        <!-- Prev -->
+        <button id="player-btn-prev" class="btn-ctrl-retro" type="button" aria-label="Previous" title="Bài trước">
+          <span>⏮</span>
+        </button>
+
+        <!-- Retro Green PLAY / PAUSE Button -->
+        <button id="player-btn-play" class="btn-retro-play-main" type="button" aria-label="Play">
+          <span id="player-play-icon">▶</span>
+        </button>
+
+        <!-- Next -->
+        <button id="player-btn-next" class="btn-ctrl-retro" type="button" aria-label="Next" title="Bài tiếp">
+          <span>⏭</span>
+        </button>
+
+        <!-- Repeat -->
+        <button id="player-btn-repeat" class="btn-ctrl-retro active" type="button" aria-label="Repeat" title="Lặp lại">
+          <span>🔁</span>
+        </button>
+      </div>
+
+      <!-- Retro FX & Action Pills Bar -->
+      <div class="player-fx-bar retro-fx-deck">
+        <button id="btn-fx-bass" class="retro-fx-btn" type="button">
+          <span class="fx-icon">🔥</span>
+          <span id="bass-mode-text">BASS: OFF</span>
+        </button>
+        <button id="btn-visual-mode" class="retro-fx-btn active" type="button">
+          <span class="fx-icon">⚡</span>
+          <span id="visual-mode-text">LED PHỔ</span>
+        </button>
+        <button id="btn-export-audio" class="retro-fx-btn" type="button">
+          <span class="fx-icon">💾</span>
+          <span>LƯU TỆP</span>
+        </button>
+        <button id="btn-delete-current" class="retro-fx-btn danger" type="button">
+          <span class="fx-icon">✕</span>
+          <span>XÓA</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- RETRO MODAL: ANDROID PWA INSTALLATION GUIDE -->
+    <div id="modal-install-guide" class="retro-modal-overlay hidden">
+      <div class="retro-modal-box">
+        <div class="retro-title-bar modal-title-bar">
+          <div class="retro-title-text">
+            <span>🤖</span> CÀI ĐẶT CHO ANDROID
+          </div>
+          <button id="btn-close-install-modal" class="win-btn-red" type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="retro-modal-body">
+          <div class="modal-app-preview">
+            <img src="/icons/icon.svg" class="modal-app-icon" alt="Boxmusic Icon">
+            <div class="modal-app-info">
+              <div class="modal-app-name">BOXMUSIC.EXE</div>
+              <div class="modal-app-desc">Ứng dụng nghe & lưu nhạc ngoại tuyến</div>
+              <span class="badge-tag">HỖ TRỢ ANDROID & CHROME</span>
+            </div>
+          </div>
+
+          <!-- DIRECT APK DOWNLOAD OPTION (RECOMMENDED) -->
+          <div class="apk-download-box" style="background:#f0fdf4; border:2px solid #22c55e; border-radius:8px; padding:12px; margin-bottom:12px; text-align:center;">
+            <div style="font-family:var(--font-pixel); font-size:0.8rem; color:#15803d; font-weight:700; margin-bottom:6px;">
+              📦 CÀI ĐẶT BẰNG FILE APK (KHUYÊN DÙNG)
+            </div>
+            <div style="font-size:0.75rem; color:#166534; margin-bottom:10px; line-height:1.4;">
+              File cài đặt <b>Boxmusic-Pro.apk</b> (chuẩn Android 14 mới nhất). Tải về và cài đặt trực tiếp, hoạt động 100% độc lập!
+            </div>
+            <a href="/downloads/Boxmusic-Pro.apk" download="Boxmusic-Pro.apk" class="btn-retro-install-big" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; font-size:0.8rem; background:#16a34a; border-color:#86efac #14532d #14532d #86efac; color:#fff; font-weight:bold; cursor:pointer;">
+              <span>📥 TẢI XUỐNG BOXMUSIC-PRO.APK</span>
+            </a>
+          </div>
+
+          <!-- Direct 1-Click Install Button if supported by browser/device -->
+          <div id="direct-install-container" style="display:none; margin-bottom: 10px;">
+            <button id="btn-trigger-pwa-install" class="btn-retro-install-big" style="width:100%; font-size:0.75rem; padding:12px;">
+              ⚡ CÀI ĐẶT ỨNG DỤNG NGAY
+            </button>
+          </div>
+
+          <!-- Notice explaining Chrome's menu behavior -->
+          <div class="modal-note-box" style="background:#eff6ff; border-color:#93c5fd; color:#1e40af; margin-bottom: 12px;">
+            <span>ℹ️ <b>Mẹo Android Chrome:</b> Trên mạng LAN nội bộ, Chrome sẽ tạm khóa nút "Cài đặt" tự động. Bạn chỉ cần chọn dòng <b>"Thêm vào Màn hình chính"</b> trong menu Chrome là ứng dụng sẽ cài thành App riêng biệt toàn màn hình!</span>
+          </div>
+
+          <!-- Official Android Steps -->
+          <div class="install-steps-list">
+            <div style="font-family:var(--font-pixel); font-size:0.75rem; color:#1e3a8a; font-weight:700; margin-bottom:8px;">
+              📲 3 BƯỚC CÀI ĐẶT VỀ MÀN HÌNH ĐIỆN THOẠI:
+            </div>
+            <div class="install-step-item">
+              <div class="step-num">1</div>
+              <div class="step-desc">
+                Nhấn vào menu <b>3 chấm (⋮)</b> ở góc trên bên phải Google Chrome.
+              </div>
+            </div>
+            <div class="install-step-item">
+              <div class="step-num">2</div>
+              <div class="step-desc">
+                Chọn dòng <b>"Thêm vào Màn hình chính"</b> (hoặc <b>"Tạo lối tắt"</b>).<br>
+                <small style="color: #64748b;">(Không chọn nút "Cài đặt ứng dụng" vì Chrome khóa nút đó với mạng nội bộ).</small>
+              </div>
+            </div>
+            <div class="install-step-item">
+              <div class="step-num">3</div>
+              <div class="step-desc">
+                Nhấn <b>"Thêm"</b> (Add). Biểu tượng Hộp Nhạc <b>Boxmusic</b> sẽ nằm trên màn hình chính của bạn, chạm vào là mở toàn màn hình và nghe nhạc offline 100%!
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions-row">
+            <button id="btn-modal-got-it" class="win-btn-gray active btn-modal-done" type="button">ĐÃ HIỂU 👍</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container" class="toast-container"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/js/db.js?v=4.0"></script>
+  <script src="/js/player.js?v=4.0"></script>
+  <script src="/js/app.js?v=4.0"></script>
+</body>
+</html>

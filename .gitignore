@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Android Toolchain & Intermediate Builds
+android-toolchain/
+android-build/work/
+android-build/assets/
+android-build/*.class
+android-build/*.keystore
+
+# Logs & Temp
+*.log
+.DS_Store
+Thumbs.db
