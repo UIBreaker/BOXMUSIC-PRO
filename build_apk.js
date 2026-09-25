@@ -196,7 +196,7 @@ public class MainActivity extends Activity {
         });
 
         setContentView(webView);
-        webView.loadUrl(SERVER_URL);
+        webView.loadUrl(ASSET_URL);
     }
 
     private void applyFullScreen() {

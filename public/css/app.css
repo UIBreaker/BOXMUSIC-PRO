@@ -2354,3 +2354,170 @@ body.retro-body {
   font-size: 0.78rem;
   font-weight: 700;
 }
+
+/* ========================================================
+   RETRO FLOATING DOWNLOAD PROGRESS DOCK & CARD TRACKER
+   ======================================================== */
+.retro-dl-dock {
+  position: fixed;
+  bottom: calc(var(--bottom-dock-height) + env(safe-area-inset-bottom) + 8px);
+  left: 12px;
+  right: 12px;
+  background: #ffffff;
+  border: 3px solid #1e3a8a;
+  border-radius: 10px;
+  box-shadow: 4px 6px 0px rgba(30, 58, 138, 0.35);
+  padding: 10px 14px;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s;
+}
+
+body.has-mini-player .retro-dl-dock {
+  bottom: calc(var(--bottom-dock-height) + var(--mini-player-height) + env(safe-area-inset-bottom) + 16px);
+}
+
+.retro-dl-dock.hidden {
+  transform: translateY(160%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dl-dock-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dl-dock-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.dl-dock-icon {
+  font-size: 1rem;
+  animation: bounce-download 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes bounce-download {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(3px); }
+}
+
+.dl-dock-title {
+  font-family: var(--font-pixel);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dl-dock-percent {
+  font-family: var(--font-pixel);
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #15803d;
+  background: #dcfce7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #86efac;
+}
+
+.dl-dock-bar {
+  width: 100%;
+  height: 10px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  border: 1.5px solid #0f172a;
+  overflow: hidden;
+  position: relative;
+}
+
+.dl-dock-fill {
+  height: 100%;
+  width: 0%;
+  background: repeating-linear-gradient(
+    -45deg,
+    #2563eb,
+    #2563eb 8px,
+    #3b82f6 8px,
+    #3b82f6 16px
+  );
+  border-radius: 2px;
+  transition: width 0.15s ease-out;
+  animation: dl-stripes 1s linear infinite;
+}
+
+@keyframes dl-stripes {
+  from { background-position: 0 0; }
+  to { background-position: 32px 0; }
+}
+
+.dl-dock-fill.success {
+  background: #16a34a !important;
+  animation: none;
+}
+
+.dl-dock-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: #475569;
+  font-family: monospace;
+}
+
+.dl-dock-size {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.dl-dock-status {
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* In-Card Progress Bar */
+.card-dl-progress-wrap {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.card-dl-progress-wrap.hidden {
+  display: none !important;
+}
+
+.card-dl-track {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  border: 1px solid #94a3b8;
+  overflow: hidden;
+}
+
+.card-dl-fill {
+  height: 100%;
+  width: 0%;
+  background: #2563eb;
+  transition: width 0.15s ease-out;
+}
+
+.card-dl-text {
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  color: #2563eb;
+  font-weight: 700;
+}

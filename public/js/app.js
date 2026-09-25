@@ -1,18 +1,25 @@
 // Boxmusic Main Application Logic
 document.addEventListener('DOMContentLoaded', () => {
-  // Service Worker v4 Registration & Auto Update
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js?v=4.0').then((reg) => {
+  // Service Worker Registration (only when supported and under http/https)
+  if ('serviceWorker' in navigator && window.location && window.location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js?v=1.0.2').then((reg) => {
       reg.update();
     }).catch((err) => {
-      console.warn('Service Worker registration failed:', err);
+      console.warn('Service Worker registration skipped:', err);
     });
   }
 
-  // State & API base
-  const API_BASE = (typeof window !== 'undefined' && window.location && (window.location.protocol === 'http:' || window.location.protocol === 'https:'))
-    ? ''
-    : 'http://192.168.1.15:3000';
+  // State & API base with custom override support
+  let customApiBase = (typeof localStorage !== 'undefined') ? localStorage.getItem('boxmusic_custom_api_base') : null;
+  function getApiBase() {
+    if (customApiBase) return customApiBase.replace(/\/+$/, '');
+    if (typeof window !== 'undefined' && window.location && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
+      return '';
+    }
+    return 'http://192.168.1.15:3000';
+  }
+  window.getApiBase = getApiBase;
+
   let currentFilter = 'all';
   let librarySongs = [];
   let downloadedIds = new Set();
@@ -889,7 +896,7 @@ document.addEventListener('DOMContentLoaded', () => {
     searchResultsList.innerHTML = '';
 
     try {
-      const res = await fetch(`${API_BASE}/api/search?q=${encodeURIComponent(query)}`);
+      const res = await fetch(`${getApiBase()}/api/search?q=${encodeURIComponent(query)}`);
       const results = await res.json();
 
       searchLoading.style.display = 'none';
@@ -913,6 +920,169 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // --- REAL-TIME AUDIO DOWNLOAD WITH PROGRESS TRACKER ---
+  const downloadDock = document.getElementById('download-progress-dock');
+  const dlDockTitle = document.getElementById('dl-dock-title');
+  const dlDockPercent = document.getElementById('dl-dock-percent');
+  const dlDockFill = document.getElementById('dl-dock-fill');
+  const dlDockSize = document.getElementById('dl-dock-size');
+  const dlDockStatus = document.getElementById('dl-dock-status');
+  let dockHideTimeout = null;
+
+  async function downloadSongWithProgress(item, cardEl, dlBtnEl) {
+    if (dlBtnEl && (dlBtnEl.classList.contains('downloading') || dlBtnEl.classList.contains('downloaded'))) {
+      return;
+    }
+
+    if (dlBtnEl) {
+      dlBtnEl.classList.add('downloading');
+      dlBtnEl.innerHTML = '<span class="retro-spinner" style="width:12px;height:12px;border-width:2px;"></span> 0%';
+    }
+
+    // Card in-place progress bar
+    const cardProgressWrap = cardEl ? cardEl.querySelector('.card-dl-progress-wrap') : null;
+    const cardProgressFill = cardEl ? cardEl.querySelector('.card-dl-fill') : null;
+    const cardProgressText = cardEl ? cardEl.querySelector('.card-dl-text') : null;
+
+    if (cardProgressWrap) cardProgressWrap.classList.remove('hidden');
+
+    // Show floating download dock
+    if (downloadDock) {
+      if (dockHideTimeout) clearTimeout(dockHideTimeout);
+      downloadDock.classList.remove('hidden');
+      if (dlDockTitle) dlDockTitle.textContent = `Đang tải: ${item.title}`;
+      if (dlDockPercent) dlDockPercent.textContent = '0%';
+      if (dlDockFill) {
+        dlDockFill.classList.remove('success');
+        dlDockFill.style.width = '2%';
+      }
+      if (dlDockSize) dlDockSize.textContent = '0.0 MB / ...';
+      if (dlDockStatus) dlDockStatus.textContent = 'Đang kết nối luồng âm thanh...';
+    }
+
+    try {
+      const api = getApiBase();
+      const response = await fetch(`${api}/api/download?id=${item.id}`);
+      if (!response.ok) throw new Error('Không thể kết nối máy chủ tải nhạc');
+
+      const clenHeader = response.headers.get('content-length') || response.headers.get('x-total-bytes');
+      let totalBytes = clenHeader ? parseInt(clenHeader, 10) : 0;
+      if (!totalBytes && item.seconds && item.seconds > 0) {
+        totalBytes = Math.round(item.seconds * 16384); // ~128kbps AAC estimate
+      }
+
+      const totalMBText = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(1) + ' MB' : '~4.0 MB';
+
+      const reader = response.body.getReader();
+      const chunks = [];
+      let receivedBytes = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        chunks.push(value);
+        receivedBytes += value.length;
+
+        const currentMB = (receivedBytes / (1024 * 1024)).toFixed(1);
+        let percent = totalBytes > 0 
+          ? Math.min(99, Math.round((receivedBytes / totalBytes) * 100)) 
+          : Math.min(95, Math.round((receivedBytes / (4 * 1024 * 1024)) * 100));
+
+        // Update card progress
+        if (cardProgressFill) cardProgressFill.style.width = `${percent}%`;
+        if (cardProgressText) cardProgressText.textContent = `${percent}% • ${currentMB} / ${totalMBText}`;
+        if (dlBtnEl) dlBtnEl.innerHTML = `<span class="retro-spinner" style="width:10px;height:10px;border-width:2px;"></span> ${percent}%`;
+
+        // Update floating dock
+        if (dlDockPercent) dlDockPercent.textContent = `${percent}%`;
+        if (dlDockFill) dlDockFill.style.width = `${percent}%`;
+        if (dlDockSize) dlDockSize.textContent = `${currentMB} MB / ${totalMBText}`;
+        if (dlDockStatus) dlDockStatus.textContent = `Đang nạp vào bộ nhớ (${percent}%)...`;
+      }
+
+      if (receivedBytes === 0) {
+        throw new Error('Dữ liệu âm thanh trống');
+      }
+
+      if (dlDockStatus) dlDockStatus.textContent = 'Đang hoàn tất đóng gói vào Hộp Nhạc...';
+      const audioBlob = new Blob(chunks, { type: 'audio/mp4' });
+
+      // Fetch thumbnail proxy for offline library
+      let thumbBlob = null;
+      try {
+        const thumbRes = await fetch(`${api}/api/proxy-image?url=${encodeURIComponent(item.thumbnail)}`);
+        if (thumbRes.ok) thumbBlob = await thumbRes.blob();
+      } catch (e) {
+        console.warn('Thumbnail download fallback:', e);
+      }
+
+      // Save into IndexedDB
+      const savedSong = {
+        id: `yt_${item.id}`,
+        title: item.title,
+        artist: item.artist,
+        duration: item.duration,
+        seconds: item.seconds,
+        audioBlob: audioBlob,
+        thumbnailBlob: thumbBlob,
+        audioMime: 'audio/mp4',
+        sizeBytes: audioBlob.size,
+        source: 'youtube',
+        favorite: false,
+        createdAt: Date.now()
+      };
+
+      await window.musicDB.saveSong(savedSong);
+      downloadedIds.add(savedSong.id);
+
+      // Play success chime
+      play8BitChime('dive');
+
+      // Update card UI
+      if (cardProgressFill) cardProgressFill.style.width = '100%';
+      if (cardProgressText) cardProgressText.textContent = `✓ Đã lưu xong (100%) • ${(audioBlob.size / 1024 / 1024).toFixed(1)} MB`;
+      if (dlBtnEl) {
+        dlBtnEl.classList.remove('downloading');
+        dlBtnEl.classList.add('downloaded');
+        dlBtnEl.innerHTML = '✓ ĐÃ LƯU';
+        dlBtnEl.title = 'Đã lưu về máy';
+      }
+
+      // Update floating dock to success state
+      if (dlDockPercent) dlDockPercent.textContent = '100%';
+      if (dlDockFill) {
+        dlDockFill.classList.add('success');
+        dlDockFill.style.width = '100%';
+      }
+      if (dlDockStatus) dlDockStatus.textContent = '✓ Đã lưu thành công vào Hộp Nhạc!';
+      if (dlDockSize) dlDockSize.textContent = `${(audioBlob.size / (1024 * 1024)).toFixed(1)} MB • Sẵn sàng nghe offline`;
+
+      showToast(`✅ Đã tải & lưu vào Thư viện thành công: ${item.title}`);
+      await loadLibrary();
+
+      // Auto-hide floating dock after 2.8s
+      dockHideTimeout = setTimeout(() => {
+        if (downloadDock) downloadDock.classList.add('hidden');
+        if (cardProgressWrap) cardProgressWrap.classList.add('hidden');
+      }, 2800);
+
+    } catch (err) {
+      console.error('Download error:', err);
+      if (dlBtnEl) {
+        dlBtnEl.classList.remove('downloading');
+        dlBtnEl.innerHTML = '✕ THỬ LẠI';
+      }
+      if (dlDockStatus) dlDockStatus.textContent = '✕ Lỗi tải bài hát, vui lòng thử lại';
+      if (cardProgressText) cardProgressText.textContent = '✕ Lỗi kết nối';
+      showToast('Tải bài hát thất bại, vui lòng kiểm tra kết nối!');
+
+      dockHideTimeout = setTimeout(() => {
+        if (downloadDock) downloadDock.classList.add('hidden');
+      }, 3500);
+    }
+  }
+
   function renderSearchResults(results) {
     searchResultsList.innerHTML = '';
 
@@ -923,7 +1093,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const isDownloaded = downloadedIds.has(`yt_${item.id}`);
 
       card.innerHTML = `
-        <img class="song-thumb" src="${item.thumbnail}" alt="thumb" loading="lazy">
+        <img class="song-thumb" src="${item.thumbnail}" alt="thumb" loading="lazy" onerror="this.src='icons/icon.svg'">
         <div class="song-info">
           <div class="song-title">${escapeHtml(item.title)}</div>
           <div class="song-meta">
@@ -932,9 +1102,16 @@ document.addEventListener('DOMContentLoaded', () => {
             <span>${item.duration}</span>
             ${item.views ? `<span>•</span><span>${item.views} lượt xem</span>` : ''}
           </div>
+          <!-- In-card real-time progress bar -->
+          <div class="card-dl-progress-wrap hidden">
+            <div class="card-dl-track">
+              <div class="card-dl-fill"></div>
+            </div>
+            <div class="card-dl-text">0% • 0 MB</div>
+          </div>
         </div>
         <div class="song-actions">
-          <button class="action-btn download-btn ${isDownloaded ? 'downloaded' : ''}" type="button" aria-label="Tải về">
+          <button class="action-btn download-btn ${isDownloaded ? 'downloaded' : ''}" type="button" aria-label="Tải về" title="${isDownloaded ? 'Đã tải về máy' : 'Tải về máy để nghe offline'}">
             ${isDownloaded ? `
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
@@ -948,7 +1125,9 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
 
-      // Click card to play (offline if already saved, or live stream)
+      const dlBtn = card.querySelector('.download-btn');
+
+      // Click card to play (offline if already saved, or live stream + auto background download)
       card.addEventListener('click', (e) => {
         if (e.target.closest('.song-actions')) return;
         
@@ -968,90 +1147,29 @@ document.addEventListener('DOMContentLoaded', () => {
           duration: item.duration,
           seconds: item.seconds,
           thumbnail: item.thumbnail,
-          streamUrl: `${API_BASE}/api/download?id=${item.id}`,
+          streamUrl: `${getApiBase()}/api/download?id=${item.id}`,
           source: 'youtube',
           favorite: false
         };
         if (window.musicPlayer) {
           window.musicPlayer.setQueue([onlineTrack], 0, true);
         }
-        showToast(`▶ Đang phát trực tuyến: ${item.title}`);
+        showToast(`▶ Đang phát & tự động tải về máy offline... 📥`);
+
+        // Automatically download to offline library so it's never lost when disconnected!
+        if (!downloadedIds.has(`yt_${item.id}`)) {
+          downloadSongWithProgress(item, card, dlBtn);
+        }
       });
 
-      // Download button
-      const dlBtn = card.querySelector('.download-btn');
-      dlBtn.addEventListener('click', async (e) => {
+      // Download button click
+      dlBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (dlBtn.classList.contains('downloaded') || dlBtn.classList.contains('downloading')) {
+        if (downloadedIds.has(`yt_${item.id}`)) {
+          showToast(`Bài hát đã có sẵn trong Thư viện offline!`);
           return;
         }
-
-        dlBtn.classList.add('downloading');
-        dlBtn.innerHTML = '<span class="retro-spinner" style="width:14px;height:14px;border-width:2px;"></span> ĐANG TẢI...';
-        showToast(`Đang tải bài hát về máy... 📥`);
-
-        try {
-          // Download audio stream
-          const audioRes = await fetch(`${API_BASE}/api/download?id=${item.id}`);
-          if (!audioRes.ok) throw new Error('Không thể tải bài hát');
-          const audioBlob = await audioRes.blob();
-
-          // Fetch thumbnail for offline use
-          let thumbBlob = null;
-          try {
-            const thumbRes = await fetch(`${API_BASE}/api/proxy-image?url=${encodeURIComponent(item.thumbnail)}`);
-            if (thumbRes.ok) thumbBlob = await thumbRes.blob();
-          } catch (e) {
-            console.warn('Thumbnail proxy failed:', e);
-          }
-
-          // Save to IndexedDB
-          const savedSong = {
-            id: `yt_${item.id}`,
-            title: item.title,
-            artist: item.artist,
-            duration: item.duration,
-            seconds: item.seconds,
-            audioBlob: audioBlob,
-            thumbnailBlob: thumbBlob,
-            audioMime: 'audio/mp4',
-            sizeBytes: audioBlob.size,
-            source: 'youtube',
-            favorite: false,
-            createdAt: Date.now()
-          };
-
-          await window.musicDB.saveSong(savedSong);
-          downloadedIds.add(savedSong.id);
-
-          // Save actual file directly into device Downloads folder
-          try {
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(audioBlob);
-            const safeFileName = (item.title || 'song').replace(/[^\w\s\u00C0-\u1EF9]/gi, '').trim();
-            a.download = `${safeFileName}.m4a`;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => {
-              URL.revokeObjectURL(a.href);
-              a.remove();
-            }, 1200);
-          } catch (e) {
-            console.warn('Device file save anchor failed:', e);
-          }
-
-          dlBtn.classList.remove('downloading');
-          dlBtn.classList.add('downloaded');
-          dlBtn.innerHTML = '✓ ĐÃ LƯU';
-
-          showToast(`✅ Đã lưu vào Thư viện & Tải về máy thành công!`);
-          await loadLibrary();
-        } catch (err) {
-          console.error('Download error:', err);
-          dlBtn.classList.remove('downloading');
-          dlBtn.innerHTML = '✕ THỬ LẠI';
-          showToast(`Tải thất bại, vui lòng thử lại!`);
-        }
+        downloadSongWithProgress(item, card, dlBtn);
       });
 
       searchResultsList.appendChild(card);
@@ -1060,6 +1178,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Player Event Listeners ---
   window.musicPlayer.on('track', (track) => {
+    document.body.classList.add('has-mini-player');
     miniPlayer.classList.remove('hidden');
     miniTitle.textContent = track.title || 'Bài hát không tên';
     miniArtist.textContent = track.artist || 'Không rõ nghệ sĩ';
@@ -1232,6 +1351,63 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
   }
+
+  // Button go to library from offline notice
+  const btnGotoLibrary = document.getElementById('btn-goto-library');
+  if (btnGotoLibrary) {
+    btnGotoLibrary.addEventListener('click', () => {
+      navItems.forEach((btn) => {
+        if (btn.getAttribute('data-tab') === 'library-view') {
+          btn.click();
+        }
+      });
+    });
+  }
+
+  // Network Status Management
+  function updateNetworkStatus() {
+    const isOnline = navigator.onLine;
+    if (networkBadge) {
+      networkBadge.className = `network-badge ${isOnline ? 'online' : 'offline'}`;
+      if (networkStatusText) networkStatusText.textContent = isOnline ? 'ONLINE' : 'OFFLINE';
+    }
+    if (!isOnline && searchResultsList && searchResultsList.children.length === 0) {
+      if (searchOfflineNotice) searchOfflineNotice.style.display = 'block';
+      if (searchPlaceholder) searchPlaceholder.style.display = 'none';
+    }
+  }
+
+  window.addEventListener('online', () => {
+    updateNetworkStatus();
+    showToast('🟢 Đã kết nối mạng trở lại!');
+    if (searchOfflineNotice) searchOfflineNotice.style.display = 'none';
+    if (searchPlaceholder && searchResultsList.children.length === 0) {
+      searchPlaceholder.style.display = 'block';
+    }
+  });
+
+  window.addEventListener('offline', () => {
+    updateNetworkStatus();
+    showToast('🟠 Thiết bị đang ngoại tuyến. Nhạc trong Thư viện vẫn phát bình thường 100%!');
+    if (searchResultsList && searchResultsList.children.length === 0) {
+      if (searchOfflineNotice) searchOfflineNotice.style.display = 'block';
+      if (searchPlaceholder) searchPlaceholder.style.display = 'none';
+    }
+  });
+
+  if (networkBadge) {
+    networkBadge.addEventListener('click', () => {
+      const current = getApiBase() || window.location.origin;
+      const newIp = prompt(`Địa chỉ máy chủ Boxmusic (PC):\nHiện tại: ${current}\n\nNhập địa chỉ IP mới nếu muốn đổi (ví dụ: http://192.168.1.20:3000):`, current);
+      if (newIp !== null && newIp.trim() !== '') {
+        customApiBase = newIp.trim().replace(/\/+$/, '');
+        localStorage.setItem('boxmusic_custom_api_base', customApiBase);
+        showToast(`Đã lưu máy chủ: ${customApiBase}`);
+      }
+    });
+  }
+
+  updateNetworkStatus();
 
   // Initial load
   loadLibrary();

@@ -20,7 +20,10 @@ process.on('unhandledRejection', (reason) => {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges', 'X-Total-Bytes']
+}));
 app.use(express.json());
 
 // Serve static frontend files with no-cache for instant mobile updates
@@ -99,11 +102,15 @@ function pipeUpstream(req, res, upstream) {
   res.status(upstream.status);
   res.setHeader('Content-Type', upstream.headers.get('content-type') || 'audio/mp4');
   const clen = upstream.headers.get('content-length');
-  if (clen) res.setHeader('Content-Length', clen);
+  if (clen) {
+    res.setHeader('Content-Length', clen);
+    res.setHeader('X-Total-Bytes', clen);
+  }
   const crange = upstream.headers.get('content-range');
   if (crange) res.setHeader('Content-Range', crange);
   res.setHeader('Accept-Ranges', 'bytes');
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, X-Total-Bytes');
   res.setHeader('Cache-Control', 'public, max-age=86400');
 
   if (req.method === 'HEAD') {
@@ -180,6 +187,7 @@ app.get('/api/download', async (req, res) => {
   res.setHeader('Content-Type', 'audio/mp4');
   res.setHeader('Accept-Ranges', 'bytes');
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, X-Total-Bytes');
   fallbackProc.stdout.pipe(res);
   req.on('close', () => {
     if (!fallbackProc.killed) fallbackProc.kill();

@@ -294,7 +294,10 @@
         <div id="search-offline-notice" class="empty-state retro-empty" style="display: none;">
           <div class="empty-retro-art">📡</div>
           <div class="empty-title">NGOẠI TUYẾN</div>
-          <div class="empty-desc">Cần kết nối Wi-Fi hoặc 4G để tìm kiếm bài mới. Bạn vẫn có thể nghe các bài đã lưu tại Thư viện.</div>
+          <div class="empty-desc">Cần kết nối Wi-Fi hoặc 4G để tìm kiếm bài mới. Bạn vẫn có thể nghe tất cả các bài hát đã tải về máy tại Thư viện.</div>
+          <button id="btn-goto-library" class="btn-retro-pill primary" type="button" style="margin-top: 14px; width: auto; padding: 10px 18px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+            <span>📁 VÀO THƯ VIỆN NGHE NHẠC NGAY</span>
+          </button>
         </div>
 
         <!-- Search Results List -->
@@ -310,6 +313,24 @@
       </section>
 
     </main>
+
+    <!-- RETRO FLOATING DOWNLOAD PROGRESS DOCK -->
+    <div id="download-progress-dock" class="retro-dl-dock hidden">
+      <div class="dl-dock-top">
+        <div class="dl-dock-left">
+          <span class="dl-dock-icon">📥</span>
+          <span id="dl-dock-title" class="dl-dock-title">Đang tải: Tên bài hát...</span>
+        </div>
+        <span id="dl-dock-percent" class="dl-dock-percent">0%</span>
+      </div>
+      <div class="dl-dock-bar">
+        <div id="dl-dock-fill" class="dl-dock-fill" style="width: 0%;"></div>
+      </div>
+      <div class="dl-dock-bottom">
+        <span id="dl-dock-size" class="dl-dock-size">0.0 MB / 0.0 MB</span>
+        <span id="dl-dock-status" class="dl-dock-status">Đang tải luồng âm thanh...</span>
+      </div>
+    </div>
 
     <!-- FLOATING RETRO MINI PLAYER -->
     <div id="mini-player" class="mini-player-retro hidden">

@@ -104,19 +104,28 @@ class MusicPlayer {
       URL.revokeObjectURL(this.currentCoverUrl);
     }
 
-    // Determine audio source URL
-    if (song.audioBlob) {
-      this.currentAudioUrl = URL.createObjectURL(song.audioBlob);
+    // Determine audio source URL (handle Blob or ArrayBuffer safely)
+    let blob = song.audioBlob;
+    if (blob) {
+      if (!(blob instanceof Blob)) {
+        blob = new Blob([blob], { type: song.audioMime || 'audio/mp4' });
+      }
+      this.currentAudioUrl = URL.createObjectURL(blob);
     } else if (song.streamUrl) {
       this.currentAudioUrl = song.streamUrl;
     } else if (song.id) {
       const cleanId = String(song.id).replace(/^yt_/, '').trim();
-      this.currentAudioUrl = `/api/download?id=${cleanId}`;
+      const api = (typeof getApiBase === 'function') ? getApiBase() : '';
+      this.currentAudioUrl = `${api}/api/download?id=${cleanId}`;
     }
 
     // Determine cover art URL
-    if (song.thumbnailBlob) {
-      this.currentCoverUrl = URL.createObjectURL(song.thumbnailBlob);
+    let tBlob = song.thumbnailBlob;
+    if (tBlob) {
+      if (!(tBlob instanceof Blob)) {
+        tBlob = new Blob([tBlob], { type: 'image/jpeg' });
+      }
+      this.currentCoverUrl = URL.createObjectURL(tBlob);
     } else if (song.thumbnail) {
       this.currentCoverUrl = song.thumbnail;
     } else {

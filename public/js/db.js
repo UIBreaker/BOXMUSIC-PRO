@@ -11,6 +11,13 @@ class MusicDB {
   async open() {
     if (this.db) return this.db;
 
+    // Request persistent storage so browser/system never purges songs
+    if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+      try {
+        await navigator.storage.persist();
+      } catch (e) {}
+    }
+
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -37,6 +44,10 @@ class MusicDB {
   }
 
   async saveSong(song) {
+    if (!song.audioBlob || song.audioBlob.size === 0) {
+      throw new Error('Dữ liệu âm thanh rỗng, không thể lưu');
+    }
+
     const db = await this.open();
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
