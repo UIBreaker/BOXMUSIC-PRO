@@ -6,20 +6,20 @@
   <title>BOXMUSIC.EXE - Retro Music Player</title>
   
   <!-- PWA Meta Tags -->
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1e40af">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Boxmusic">
-  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
-  <link rel="apple-touch-icon" href="/icons/icon.svg">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
 
   <!-- Retro Pixel Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/css/app.css?v=4.0">
+  <link rel="stylesheet" href="css/app.css?v=1.0.2">
 </head>
 <body class="retro-body">
   <div id="app">
@@ -197,17 +197,10 @@
         <div class="os-icon">💾</div>
         <div class="os-title-col">
           <span class="os-window-name">BOXMUSIC.EXE</span>
-          <span id="greeting-time" class="os-substatus">HỆ THỐNG OFFLINE V1.0</span>
+          <span id="greeting-time" class="os-substatus">HỆ THỐNG OFFLINE V1.0.2</span>
         </div>
       </div>
       <div class="header-actions-row">
-        <a href="/downloads/Boxmusic-Pro.apk" download="Boxmusic-Pro.apk" id="btn-install-android" class="btn-os-install" style="text-decoration:none;" title="Tải file APK cho Android">
-          <span class="icon">📥</span>
-          <span>TẢI FILE APK</span>
-        </a>
-        <button id="btn-replay-intro" class="btn-os-replay" type="button" title="Xem lại intro mở hộp">
-          <span>📼 MỞ HỘP</span>
-        </button>
         <div id="network-badge" class="network-badge online">
           <span class="dot"></span>
           <span id="network-status-text">ONLINE</span>
@@ -220,18 +213,19 @@
       
       <!-- TAB 1: THƯ VIỆN OFFLINE -->
       <section id="library-view" class="view-panel active">
-        <!-- Retro Android Install Banner -->
-        <div class="retro-install-banner" id="retro-install-banner">
-          <div class="install-banner-left">
-            <div class="install-banner-icon">📦</div>
-            <div class="install-banner-text">
-              <div class="install-title">CÀI ĐẶT BOXMUSIC CHO ANDROID</div>
-              <div class="install-sub">Đã đóng gói file APK chính thức để tải về và cài trực tiếp vào máy</div>
-            </div>
+        <!-- Device Storage & Vault Location Panel -->
+        <div class="device-vault-card" id="device-vault-card">
+          <div class="vault-top-row">
+            <span class="vault-badge" id="vault-device-badge">📱 THIẾT BỊ ANDROID</span>
+            <span class="vault-free-text" id="vault-free-space">TRỐNG: ĐANG TÍNH...</span>
           </div>
-          <a href="/downloads/Boxmusic-Pro.apk" download="Boxmusic-Pro.apk" class="btn-install-action" style="text-decoration:none; display:inline-flex; align-items:center;">
-            <span>TẢI APK NGAY 📥</span>
-          </a>
+          <div class="vault-path-row" id="vault-path-row" title="Vị trí lưu trữ bài hát">
+            <span>📁</span>
+            <span id="vault-path-text">/storage/emulated/0/Boxmusic</span>
+          </div>
+          <div class="vault-progress-track">
+            <div class="vault-progress-fill" id="vault-progress-bar" style="width: 5%;"></div>
+          </div>
         </div>
 
         <!-- Retro Window Container for Library -->
@@ -241,20 +235,11 @@
             <span id="storage-stats" class="win-counter">0 BÀI • 0 MB</span>
           </div>
           <div class="retro-window-inner">
-            <div class="library-top-bar">
-              <button id="btn-import-file" class="btn-retro-pill primary" type="button">
-                <span class="icon">📂</span>
-                <span>+ THÊM TỆP MP3/MP4</span>
-              </button>
-              <input type="file" id="local-file-input" accept="audio/*,video/mp4,video/x-m4v" multiple style="display: none;">
-            </div>
-
             <!-- Retro Filter Tabs -->
             <div class="filter-pills retro-tabs">
               <button class="filter-pill active" data-filter="all">TẤT CẢ</button>
               <button class="filter-pill" data-filter="favorite">♥ YÊU THÍCH</button>
               <button class="filter-pill" data-filter="youtube">YOUTUBE</button>
-              <button class="filter-pill" data-filter="local">MÁY</button>
             </div>
           </div>
         </div>
@@ -268,7 +253,7 @@
         <div id="library-empty" class="empty-state retro-empty" style="display: none;">
           <div class="empty-retro-art">📻</div>
           <div class="empty-title">CHƯA CÓ BÀI HÁT</div>
-          <div class="empty-desc">Nhấp <b>TÌM KIẾM</b> để tải nhạc thế giới hoặc bấm <b>+ THÊM TỆP</b> để nạp bài hát offline.</div>
+          <div class="empty-desc">Nhấp <b>TÌM KIẾM</b> để tải nhạc thế giới và nghe offline mọi lúc mọi nơi!</div>
         </div>
       </section>
 
@@ -333,7 +318,7 @@
       </div>
       <div class="mini-content-row" id="mini-info-click">
         <div class="mini-thumb-wrap">
-          <img id="mini-thumb" class="mini-thumb" src="/icons/icon.svg" alt="Cover">
+          <img id="mini-thumb" class="mini-thumb" src="icons/icon.svg" alt="Cover">
           <div class="pixel-mini-badge">▶</div>
         </div>
         <div class="mini-info">
@@ -396,7 +381,7 @@
         <!-- MODE 1: Retro Pixel Frame Card -->
         <div id="retro-card-view" class="retro-card-container">
           <div class="retro-art-border">
-            <img id="player-art" class="retro-big-card-art" src="/icons/icon.svg" alt="Album Art">
+            <img id="player-art" class="retro-big-card-art" src="icons/icon.svg" alt="Album Art">
             <div class="retro-art-glare"></div>
           </div>
         </div>
@@ -407,7 +392,7 @@
             <div class="vinyl-shine"></div>
             <div class="vinyl-groove-lines"></div>
             <div class="vinyl-center">
-              <img id="player-art-vinyl" class="album-art" src="/icons/icon.svg" alt="Album Art">
+              <img id="player-art-vinyl" class="album-art" src="icons/icon.svg" alt="Album Art">
               <div class="vinyl-hole"></div>
             </div>
           </div>
@@ -502,7 +487,7 @@
         </div>
         <div class="retro-modal-body">
           <div class="modal-app-preview">
-            <img src="/icons/icon.svg" class="modal-app-icon" alt="Boxmusic Icon">
+            <img src="icons/icon.svg" class="modal-app-icon" alt="Boxmusic Icon">
             <div class="modal-app-info">
               <div class="modal-app-name">BOXMUSIC.EXE</div>
               <div class="modal-app-desc">Ứng dụng nghe & lưu nhạc ngoại tuyến</div>
@@ -518,7 +503,7 @@
             <div style="font-size:0.75rem; color:#166534; margin-bottom:10px; line-height:1.4;">
               File cài đặt <b>Boxmusic-Pro.apk</b> (chuẩn Android 14 mới nhất). Tải về và cài đặt trực tiếp, hoạt động 100% độc lập!
             </div>
-            <a href="/downloads/Boxmusic-Pro.apk" download="Boxmusic-Pro.apk" class="btn-retro-install-big" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; font-size:0.8rem; background:#16a34a; border-color:#86efac #14532d #14532d #86efac; color:#fff; font-weight:bold; cursor:pointer;">
+            <a href="downloads/Boxmusic-Pro.apk" download="Boxmusic-Pro.apk" class="btn-retro-install-big" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; font-size:0.8rem; background:#16a34a; border-color:#86efac #14532d #14532d #86efac; color:#fff; font-weight:bold; cursor:pointer;">
               <span>📥 TẢI XUỐNG BOXMUSIC-PRO.APK</span>
             </a>
           </div>
@@ -573,8 +558,8 @@
   </div>
 
   <!-- Scripts -->
-  <script src="/js/db.js?v=4.0"></script>
-  <script src="/js/player.js?v=4.0"></script>
-  <script src="/js/app.js?v=4.0"></script>
+  <script src="js/db.js?v=1.0.2"></script>
+  <script src="js/player.js?v=1.0.2"></script>
+  <script src="js/app.js?v=1.0.2"></script>
 </body>
 </html>

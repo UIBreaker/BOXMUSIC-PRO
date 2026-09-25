@@ -603,6 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const stats = await window.musicDB.getStats();
 
       storageStats.textContent = `${stats.count} bài • ${stats.totalMB} MB`;
+      await updateDeviceStorageInfo(stats.count, stats.totalBytes || 0);
 
       downloadedIds.clear();
       librarySongs.forEach((s) => downloadedIds.add(s.id));
@@ -610,6 +611,48 @@ document.addEventListener('DOMContentLoaded', () => {
       renderLibraryList();
     } catch (err) {
       console.error('Failed to load library:', err);
+    }
+  }
+
+  // --- Device Storage & Vault Status (Mobile vs PC) ---
+  async function updateDeviceStorageInfo(songCount = 0, totalBytes = 0) {
+    const badgeEl = document.getElementById('vault-device-badge');
+    const freeEl = document.getElementById('vault-free-space');
+    const pathEl = document.getElementById('vault-path-text');
+    const barEl = document.getElementById('vault-progress-bar');
+    if (!badgeEl || !freeEl || !pathEl) return;
+
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (window.innerWidth <= 768);
+    const isAndroid = /Android/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      badgeEl.textContent = isAndroid ? '📱 THIẾT BỊ ANDROID' : '📱 THIẾT BỊ DI ĐỘNG';
+      pathEl.textContent = '/storage/emulated/0/Boxmusic';
+    } else {
+      badgeEl.textContent = '💻 MÁY TÍNH (PC)';
+      pathEl.textContent = 'C:\\Users\\AppData\\Boxmusic';
+    }
+
+    if (navigator.storage && navigator.storage.estimate) {
+      try {
+        const estimate = await navigator.storage.estimate();
+        const quotaBytes = estimate.quota || (64 * 1024 * 1024 * 1024);
+        const usageBytes = estimate.usage || totalBytes;
+        const freeBytes = Math.max(0, quotaBytes - usageBytes);
+
+        const freeGB = (freeBytes / (1024 * 1024 * 1024)).toFixed(1);
+        const usedMB = (usageBytes / (1024 * 1024)).toFixed(1);
+        const percent = Math.min(100, Math.max(5, Math.round((usageBytes / quotaBytes) * 100)));
+
+        freeEl.textContent = `TRỐNG: ${freeGB} GB (${usedMB} MB ĐÃ DÙNG)`;
+        if (barEl) barEl.style.width = `${percent}%`;
+      } catch (e) {
+        freeEl.textContent = `TRỐNG: KHẢ DỤNG (${songCount} BÀI)`;
+        if (barEl) barEl.style.width = '10%';
+      }
+    } else {
+      freeEl.textContent = `TRỐNG: KHẢ DỤNG (${songCount} BÀI)`;
+      if (barEl) barEl.style.width = '10%';
     }
   }
 
@@ -639,7 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
       card.className = `song-card ${isNowPlaying ? 'now-playing' : ''}`;
 
       // Cover Art URL
-      let thumbSrc = '/icons/icon.svg';
+      let thumbSrc = 'icons/icon.svg';
       if (song.thumbnailBlob) {
         thumbSrc = URL.createObjectURL(song.thumbnailBlob);
       }
@@ -744,48 +787,50 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Local File Import (MP3/MP4/M4A) ---
-  btnImportFile.addEventListener('click', () => {
-    localFileInput.click();
-  });
+  if (btnImportFile && localFileInput) {
+    btnImportFile.addEventListener('click', () => {
+      localFileInput.click();
+    });
 
-  localFileInput.addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files);
-    if (!files || files.length === 0) return;
+    localFileInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      if (!files || files.length === 0) return;
 
-    showToast(`Đang nạp ${files.length} tệp âm thanh...`);
+      showToast(`Đang nạp ${files.length} tệp âm thanh...`);
 
-    let importedCount = 0;
-    for (const file of files) {
-      try {
-        const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
-        const durationSec = await getAudioDuration(file);
+      let importedCount = 0;
+      for (const file of files) {
+        try {
+          const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+          const durationSec = await getAudioDuration(file);
 
-        const song = {
-          id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-          title: cleanName,
-          artist: 'Tệp từ máy',
-          duration: formatTime(durationSec),
-          seconds: durationSec,
-          audioBlob: file,
-          thumbnailBlob: null,
-          audioMime: file.type || 'audio/mp4',
-          sizeBytes: file.size,
-          source: 'local',
-          favorite: false,
-          createdAt: Date.now()
-        };
+          const song = {
+            id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+            title: cleanName,
+            artist: 'Tệp từ máy',
+            duration: formatTime(durationSec),
+            seconds: durationSec,
+            audioBlob: file,
+            thumbnailBlob: null,
+            audioMime: file.type || 'audio/mp4',
+            sizeBytes: file.size,
+            source: 'local',
+            favorite: false,
+            createdAt: Date.now()
+          };
 
-        await window.musicDB.saveSong(song);
-        importedCount++;
-      } catch (err) {
-        console.error('Error importing file:', file.name, err);
+          await window.musicDB.saveSong(song);
+          importedCount++;
+        } catch (err) {
+          console.error('Error importing file:', file.name, err);
+        }
       }
-    }
 
-    localFileInput.value = '';
-    showToast(`Đã thêm thành công ${importedCount} bài hát vào máy! 🎉`);
-    await loadLibrary();
-  });
+      localFileInput.value = '';
+      showToast(`Đã thêm thành công ${importedCount} bài hát vào máy! 🎉`);
+      await loadLibrary();
+    });
+  }
 
   function getAudioDuration(file) {
     return new Promise((resolve) => {
@@ -1018,12 +1063,12 @@ document.addEventListener('DOMContentLoaded', () => {
     miniPlayer.classList.remove('hidden');
     miniTitle.textContent = track.title || 'Bài hát không tên';
     miniArtist.textContent = track.artist || 'Không rõ nghệ sĩ';
-    miniThumb.src = track.coverUrl || '/icons/icon.svg';
+    miniThumb.src = track.coverUrl || 'icons/icon.svg';
 
     playerTitle.textContent = track.title || 'Bài hát không tên';
     playerArtist.textContent = track.artist || 'Không rõ nghệ sĩ';
-    playerArt.src = track.coverUrl || '/icons/icon.svg';
-    if (playerArtVinyl) playerArtVinyl.src = track.coverUrl || '/icons/icon.svg';
+    playerArt.src = track.coverUrl || 'icons/icon.svg';
+    if (playerArtVinyl) playerArtVinyl.src = track.coverUrl || 'icons/icon.svg';
 
     playerBtnFav.classList.toggle('active', !!track.favorite);
 

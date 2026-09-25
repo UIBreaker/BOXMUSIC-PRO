@@ -120,7 +120,7 @@ class MusicPlayer {
     } else if (song.thumbnail) {
       this.currentCoverUrl = song.thumbnail;
     } else {
-      this.currentCoverUrl = '/icons/icon.svg';
+      this.currentCoverUrl = 'icons/icon.svg';
     }
 
     this.audio.src = this.currentAudioUrl;
@@ -405,7 +405,7 @@ class MusicPlayer {
       artist: song.artist || 'Không rõ nghệ sĩ',
       album: 'Boxmusic Offline',
       artwork: [
-        { src: song.coverUrl || '/icons/icon-512.png', sizes: '512x512', type: 'image/png' }
+        { src: song.coverUrl || 'icons/icon-512.png', sizes: '512x512', type: 'image/png' }
       ]
     });
 
