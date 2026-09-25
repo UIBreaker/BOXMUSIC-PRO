@@ -1031,70 +1031,98 @@ document.addEventListener('DOMContentLoaded', () => {
     searchLoading.style.display = 'none';
   });
 
-  // --- Pure Client Direct YouTube Scraper (Hoạt động độc lập không cần máy chủ PC) ---
-  async function searchYouTubeDirect(query) {
-    const urls = [
-      `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&hl=vi`,
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&hl=vi`)}`
-    ];
-
-    let html = '';
-    for (const url of urls) {
-      try {
-        const controller = new AbortController();
-        const tid = setTimeout(() => controller.abort(), 6000);
-        const res = await fetch(url, { signal: controller.signal });
-        clearTimeout(tid);
-        if (res.ok) {
-          const txt = await res.text();
-          if (txt && (txt.includes('ytInitialData') || txt.includes('videoRenderer'))) {
-            html = txt;
-            break;
-          }
-        }
-      } catch (e) {}
-    }
-
-    if (!html) throw new Error('Không thể tải kết quả YouTube trực tiếp');
-
-    const match = html.match(/ytInitialData\s*=\s*({.+?});<\/script>/s) || html.match(/var ytInitialData\s*=\s*({.+?});/);
-    if (!match) throw new Error('Không thể phân tích dữ liệu YouTube');
-
-    const data = JSON.parse(match[1]);
-    const sections = data?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
-    const results = [];
-
-    for (const sec of sections) {
-      const items = sec?.itemSectionRenderer?.contents || [];
-      for (const item of items) {
-        const v = item.videoRenderer;
-        if (!v || !v.videoId) continue;
-
-        const title = v.title?.runs?.[0]?.text || (v.title?.simpleText) || 'Không rõ tiêu đề';
-        const artist = v.ownerText?.runs?.[0]?.text || v.shortBylineText?.runs?.[0]?.text || 'YouTube';
-        const duration = v.lengthText?.simpleText || '03:30';
-        const views = v.viewCountText?.simpleText || '';
-        const thumbs = v.thumbnail?.thumbnails || [];
-        const thumbnail = thumbs.length > 0 ? thumbs[thumbs.length - 1].url : `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`;
-
-        const parts = duration.split(':').map(Number);
-        let seconds = 0;
-        if (parts.length === 2) seconds = parts[0] * 60 + parts[1];
-        else if (parts.length === 3) seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
-
-        results.push({
-          id: v.videoId,
-          title,
-          artist,
-          duration,
-          seconds,
-          views,
-          thumbnail
-        });
+  // --- YouTube Search Engine (Độc Lập Không Cần Máy Chủ PC) ---
+  // Chiến lược 1: InnerTube API (YouTube internal API - ổn định nhất)
+  // Chiến lược 2: Cào HTML với bracket-depth parser (thay regex lỗi)
+  // Chiến lược 3: CORS proxy fallback
+  function _extractYtInitialData(html) {
+    const marker = 'ytInitialData';
+    const idx = html.indexOf(marker);
+    if (idx === -1) return null;
+    const start = html.indexOf('{', idx);
+    if (start === -1) return null;
+    let depth = 0, inStr = false, esc = false;
+    for (let i = start; i < html.length; i++) {
+      const c = html[i];
+      if (esc) { esc = false; continue; }
+      if (c === '\\' && inStr) { esc = true; continue; }
+      if (c === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (c === '{') depth++;
+      else if (c === '}' && --depth === 0) {
+        try { return JSON.parse(html.slice(start, i + 1)); } catch (e) { return null; }
       }
     }
+    return null;
+  }
 
+  function _parseYtResults(data) {
+    const sections = data?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
+    const results = [];
+    for (const sec of sections) {
+      for (const item of (sec?.itemSectionRenderer?.contents || [])) {
+        const v = item.videoRenderer;
+        if (!v || !v.videoId) continue;
+        const title = v.title?.runs?.[0]?.text || v.title?.simpleText || 'Không rõ tiêu đề';
+        const artist = v.ownerText?.runs?.[0]?.text || v.shortBylineText?.runs?.[0]?.text || 'YouTube';
+        const duration = v.lengthText?.simpleText || '0:00';
+        const thumbs = v.thumbnail?.thumbnails || [];
+        const thumbnail = thumbs.length > 0 ? thumbs[thumbs.length - 1].url : `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`;
+        const parts = duration.split(':').map(Number);
+        const seconds = parts.length === 3 ? parts[0]*3600+parts[1]*60+parts[2] : (parts[0]||0)*60+(parts[1]||0);
+        results.push({ id: v.videoId, title, artist, duration, seconds, views: v.viewCountText?.simpleText || '', thumbnail });
+      }
+    }
     return results;
+  }
+
+  async function searchYouTubeDirect(query) {
+    const enc = encodeURIComponent(query);
+
+    // Chiến lược 1: InnerTube API (POST JSON, không cần parse HTML)
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 8000);
+      const res = await fetch('https://www.youtube.com/youtubei/v1/search?prettyPrint=false', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query,
+          context: {
+            client: { clientName: 'WEB', clientVersion: '2.20231201.00.00', hl: 'vi', gl: 'VN' }
+          }
+        }),
+        signal: ctrl.signal
+      });
+      clearTimeout(tid);
+      if (res.ok) {
+        const data = await res.json();
+        const results = _parseYtResults(data);
+        if (results.length > 0) return results;
+      }
+    } catch (e) { console.warn('[YT-InnerTube]', e.message); }
+
+    // Chiến lược 2: Cào HTML trực tiếp (hoạt động tốt trong Android WebView)
+    const htmlUrls = [
+      `https://www.youtube.com/results?search_query=${enc}&hl=vi`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent('https://www.youtube.com/results?search_query=' + enc + '&hl=vi')}`
+    ];
+    for (const url of htmlUrls) {
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 8000);
+        const res = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(tid);
+        if (!res.ok) continue;
+        const html = await res.text();
+        const data = _extractYtInitialData(html);
+        if (!data) continue;
+        const results = _parseYtResults(data);
+        if (results.length > 0) return results;
+      } catch (e) { console.warn('[YT-HTML]', url, e.message); }
+    }
+
+    throw new Error('Tất cả chiến lược tìm kiếm đều thất bại');
   }
 
   async function performSearch(query) {
