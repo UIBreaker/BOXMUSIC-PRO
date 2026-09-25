@@ -10,6 +10,10 @@ class MusicPlayer {
     this.repeatMode = 'all'; // 'none' | 'all' | 'one'
     this.currentAudioUrl = null;
     this.currentCoverUrl = null;
+    this.isYtPlaying = false;
+    this.ytPlayer = null;
+    this.ytInterval = null;
+    this._ytInitialized = false;
 
     // Listeners
     this.listeners = {
@@ -21,6 +25,9 @@ class MusicPlayer {
     };
 
     this._bindAudioEvents();
+    if (typeof window !== 'undefined') {
+      setTimeout(() => this._initYouTubePlayer(), 1000);
+    }
   }
 
   _bindAudioEvents() {
@@ -56,6 +63,13 @@ class MusicPlayer {
 
     this.audio.addEventListener('error', (e) => {
       console.warn('Audio playback error:', e);
+      const cur = this.getCurrentSong();
+      if (cur && !cur.audioBlob && (cur.id || cur.source === 'youtube')) {
+        const cleanId = String(cur.id).replace(/^yt_/, '').trim();
+        if (cleanId && this._playYouTubeFallback(cleanId)) {
+          return;
+        }
+      }
       this.isPlaying = false;
       this._notify('state', { isPlaying: false, error: true });
     });
@@ -95,6 +109,13 @@ class MusicPlayer {
     if (index < 0 || index >= this.queue.length) return;
     this.currentIndex = index;
     const song = this.queue[index];
+
+    // Stop YouTube player if it was playing
+    if (this.isYtPlaying && this.ytPlayer && typeof this.ytPlayer.stopVideo === 'function') {
+      try { this.ytPlayer.stopVideo(); } catch (e) {}
+    }
+    this.isYtPlaying = false;
+    this._stopYTTimeTracker();
 
     // Cleanup previous object URLs
     if (this.currentAudioUrl && this.currentAudioUrl.startsWith('blob:')) {
@@ -151,6 +172,12 @@ class MusicPlayer {
   }
 
   async play() {
+    if (this.isYtPlaying && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
+      try { this.ytPlayer.playVideo(); } catch (e) {}
+      this.isPlaying = true;
+      this._notify('state', { isPlaying: true });
+      return;
+    }
     try {
       await this.audio.play();
     } catch (e) {
@@ -167,14 +194,144 @@ class MusicPlayer {
   }
 
   pause() {
+    if (this.isYtPlaying && this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
+      try { this.ytPlayer.pauseVideo(); } catch (e) {}
+      this.isPlaying = false;
+      this._notify('state', { isPlaying: false });
+    }
     this.audio.pause();
   }
 
   togglePlay() {
+    if (this.isYtPlaying && this.ytPlayer) {
+      if (this.isPlaying) {
+        this.pause();
+      } else {
+        this.play();
+      }
+      return;
+    }
     if (this.audio.paused) {
       this.play();
     } else {
       this.pause();
+    }
+  }
+
+  seek(seconds) {
+    if (this.isYtPlaying && this.ytPlayer && typeof this.ytPlayer.seekTo === 'function') {
+      this.ytPlayer.seekTo(seconds, true);
+      return;
+    }
+    if (isFinite(seconds) && this.audio.duration) {
+      this.audio.currentTime = Math.max(0, Math.min(seconds, this.audio.duration));
+    }
+  }
+
+  seekPercent(percent) {
+    if (this.isYtPlaying && this.ytPlayer && typeof this.ytPlayer.seekTo === 'function') {
+      const dur = this.ytPlayer.getDuration() || 0;
+      if (dur > 0) {
+        this.ytPlayer.seekTo((percent / 100) * dur, true);
+      }
+      return;
+    }
+    if (isFinite(percent) && this.audio.duration) {
+      this.audio.currentTime = (percent / 100) * this.audio.duration;
+    }
+  }
+
+  _initYouTubePlayer() {
+    if (this._ytInitialized || typeof window === 'undefined') return;
+    this._ytInitialized = true;
+
+    const setupYT = () => {
+      if (typeof YT !== 'undefined' && YT.Player && !this.ytPlayer) {
+        try {
+          this.ytPlayer = new YT.Player('yt-player-element', {
+            height: '200',
+            width: '200',
+            playerVars: {
+              autoplay: 1,
+              controls: 0,
+              disablekb: 1,
+              fs: 0,
+              playsinline: 1
+            },
+            events: {
+              onStateChange: (event) => {
+                if (event.data === (window.YT ? YT.PlayerState.PLAYING : 1)) {
+                  this.isPlaying = true;
+                  this._notify('state', { isPlaying: true });
+                  this._startYTTimeTracker();
+                } else if (event.data === (window.YT ? YT.PlayerState.PAUSED : 2)) {
+                  this.isPlaying = false;
+                  this._notify('state', { isPlaying: false });
+                  this._stopYTTimeTracker();
+                } else if (event.data === (window.YT ? YT.PlayerState.ENDED : 0)) {
+                  this._stopYTTimeTracker();
+                  if (this.repeatMode === 'one') {
+                    this.ytPlayer.seekTo(0, true);
+                    this.ytPlayer.playVideo();
+                  } else {
+                    this.next(false);
+                  }
+                }
+              }
+            }
+          });
+        } catch (e) {
+          console.warn('YT.Player init failed:', e);
+        }
+      }
+    };
+
+    if (window.YT && window.YT.Player) {
+      setupYT();
+    } else {
+      const prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof prev === 'function') prev();
+        setupYT();
+      };
+    }
+  }
+
+  _playYouTubeFallback(videoId) {
+    this._initYouTubePlayer();
+    if (this.ytPlayer && typeof this.ytPlayer.loadVideoById === 'function') {
+      try {
+        this.isYtPlaying = true;
+        this.audio.pause();
+        this.ytPlayer.loadVideoById(videoId);
+        this.ytPlayer.playVideo();
+        if (typeof showToast === 'function') {
+          showToast('▶ Máy tính đang tắt máy chủ, phát YouTube trực tiếp!');
+        }
+        return true;
+      } catch (err) {
+        console.warn('YT fallback error:', err);
+      }
+    }
+    return false;
+  }
+
+  _startYTTimeTracker() {
+    this._stopYTTimeTracker();
+    this.ytInterval = setInterval(() => {
+      if (this.isYtPlaying && this.ytPlayer && typeof this.ytPlayer.getCurrentTime === 'function') {
+        const currentTime = this.ytPlayer.getCurrentTime() || 0;
+        const duration = this.ytPlayer.getDuration() || 0;
+        const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
+        this._notify('time', { currentTime, duration, percent });
+      }
+    }, 500);
+  }
+
+  _stopYTTimeTracker() {
+    if (this.ytInterval) {
+      clearInterval(this.ytInterval);
+      this.ytInterval = null;
     }
   }
 

@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/app.css?v=1.0.2">
+  <link rel="stylesheet" href="css/app.css?v=1.0.3">
 </head>
 <body class="retro-body">
   <div id="app">
@@ -197,7 +197,7 @@
         <div class="os-icon">💾</div>
         <div class="os-title-col">
           <span class="os-window-name">BOXMUSIC.EXE</span>
-          <span id="greeting-time" class="os-substatus">HỆ THỐNG OFFLINE V1.0.2</span>
+          <span id="greeting-time" class="os-substatus">HỆ THỐNG OFFLINE V1.0.3</span>
         </div>
       </div>
       <div class="header-actions-row">
@@ -225,6 +225,16 @@
           </div>
           <div class="vault-progress-track">
             <div class="vault-progress-fill" id="vault-progress-bar" style="width: 5%;"></div>
+          </div>
+          <!-- Vault Backup & Restore Buttons -->
+          <div class="vault-backup-row">
+            <button id="btn-export-vault" class="btn-vault-action" type="button" title="Xuất dữ liệu toàn bộ bài hát ra file để lưu giữ an toàn">
+              <span>💾 SAO LƯU NHẠC</span>
+            </button>
+            <button id="btn-import-vault" class="btn-vault-action" type="button" title="Khôi phục toàn bộ bài hát từ file đã sao lưu khi nâng cấp">
+              <span>📥 KHÔI PHỤC</span>
+            </button>
+            <input type="file" id="vault-file-input" accept=".json" style="display: none;">
           </div>
         </div>
 
@@ -576,11 +586,19 @@
 
     <!-- Toast container -->
     <div id="toast-container" class="toast-container"></div>
+
+    <!-- Hidden YouTube Player Container for offline server fallback -->
+    <div id="yt-player-wrap" style="position: absolute; width: 200px; height: 200px; left: -9999px; top: -9999px; overflow: hidden; opacity: 0; pointer-events: none;">
+      <div id="yt-player-element"></div>
+    </div>
   </div>
 
+  <!-- YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
   <!-- Scripts -->
-  <script src="js/db.js?v=1.0.2"></script>
-  <script src="js/player.js?v=1.0.2"></script>
-  <script src="js/app.js?v=1.0.2"></script>
+  <script src="js/db.js?v=1.0.3"></script>
+  <script src="js/player.js?v=1.0.3"></script>
+  <script src="js/app.js?v=1.0.3"></script>
 </body>
 </html>

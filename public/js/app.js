@@ -2,7 +2,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   // Service Worker Registration (only when supported and under http/https)
   if ('serviceWorker' in navigator && window.location && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('sw.js?v=1.0.2').then((reg) => {
+    navigator.serviceWorker.register('sw.js?v=1.0.3').then((reg) => {
       reg.update();
     }).catch((err) => {
       console.warn('Service Worker registration skipped:', err);
@@ -663,6 +663,155 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // --- Vault Backup & Restore (Bảo vệ dữ liệu bài hát khi Cập nhật Phiên bản) ---
+  const btnExportVault = document.getElementById('btn-export-vault');
+  const btnImportVault = document.getElementById('btn-import-vault');
+  const vaultFileInput = document.getElementById('vault-file-input');
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function dataUrlToBlob(dataUrl) {
+    const parts = dataUrl.split(';base64,');
+    const contentType = (parts[0].split(':')[1] || 'audio/mp4');
+    const raw = window.atob(parts[1]);
+    const rawLength = raw.length;
+    const uInt8Array = new Uint8Array(rawLength);
+    for (let i = 0; i < rawLength; ++i) {
+      uInt8Array[i] = raw.charCodeAt(i);
+    }
+    return new Blob([uInt8Array], { type: contentType });
+  }
+
+  if (btnExportVault) {
+    btnExportVault.addEventListener('click', async () => {
+      try {
+        const songs = await window.musicDB.getAllSongs();
+        if (!songs || songs.length === 0) {
+          showToast('ℹ️ Thư viện chưa có bài hát nào để sao lưu!');
+          return;
+        }
+
+        showToast(`📦 Đang chuẩn bị sao lưu ${songs.length} bài hát...`);
+        const backupSongs = [];
+        for (let i = 0; i < songs.length; i++) {
+          const s = songs[i];
+          let audioB64 = null;
+          if (s.audioBlob) {
+            audioB64 = await blobToBase64(s.audioBlob);
+          }
+          let thumbB64 = null;
+          if (s.thumbnailBlob) {
+            thumbB64 = await blobToBase64(s.thumbnailBlob);
+          }
+          backupSongs.push({
+            id: s.id,
+            title: s.title,
+            artist: s.artist,
+            duration: s.duration,
+            seconds: s.seconds,
+            source: s.source,
+            favorite: s.favorite,
+            audioMime: s.audioMime || 'audio/mp4',
+            audioBase64: audioB64,
+            thumbnailBase64: thumbB64,
+            createdAt: s.createdAt || Date.now()
+          });
+        }
+
+        const backupData = {
+          app: 'Boxmusic',
+          version: '1.0.3',
+          exportDate: new Date().toISOString(),
+          totalSongs: backupSongs.length,
+          songs: backupSongs
+        };
+
+        const jsonStr = JSON.stringify(backupData);
+        const jsonBlob = new Blob([jsonStr], { type: 'application/json' });
+        const dlUrl = URL.createObjectURL(jsonBlob);
+        const a = document.createElement('a');
+        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        a.href = dlUrl;
+        a.download = `Boxmusic_Backup_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(dlUrl);
+
+        showToast(`✅ Đã xuất tệp sao lưu Thư viện (${backupSongs.length} bài) thành công!`);
+      } catch (err) {
+        console.error('Export vault error:', err);
+        showToast('❌ Lỗi khi xuất tệp sao lưu!');
+      }
+    });
+  }
+
+  if (btnImportVault && vaultFileInput) {
+    btnImportVault.addEventListener('click', () => {
+      vaultFileInput.value = '';
+      vaultFileInput.click();
+    });
+
+    vaultFileInput.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      showToast('📥 Đang đọc tệp sao lưu Thư viện...');
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        if (!data || !Array.isArray(data.songs)) {
+          showToast('❌ Tệp sao lưu không đúng định dạng Boxmusic!');
+          return;
+        }
+
+        let importedCount = 0;
+        showToast(`⏳ Đang nạp ${data.songs.length} bài hát vào bộ nhớ máy...`);
+
+        for (const s of data.songs) {
+          if (!s.audioBase64) continue;
+          const restoredBlob = dataUrlToBlob(s.audioBase64);
+          let restoredThumb = null;
+          if (s.thumbnailBase64) {
+            restoredThumb = dataUrlToBlob(s.thumbnailBase64);
+          }
+
+          const restoredSong = {
+            id: s.id,
+            title: s.title || 'Bài hát không tên',
+            artist: s.artist || 'Không rõ nghệ sĩ',
+            duration: s.duration || '--:--',
+            seconds: s.seconds || 0,
+            audioBlob: restoredBlob,
+            thumbnailBlob: restoredThumb,
+            audioMime: s.audioMime || 'audio/mp4',
+            sizeBytes: restoredBlob.size,
+            source: s.source || 'local',
+            favorite: !!s.favorite,
+            createdAt: s.createdAt || Date.now()
+          };
+
+          await window.musicDB.saveSong(restoredSong);
+          importedCount++;
+        }
+
+        await loadLibrary();
+        showToast(`🎉 Đã khôi phục thành công ${importedCount} bài hát vào Thư viện!`);
+      } catch (err) {
+        console.error('Import vault error:', err);
+        showToast('❌ Lỗi khi khôi phục bài hát từ tệp sao lưu!');
+      }
+    });
+  }
+
   function renderLibraryList() {
     librarySongList.innerHTML = '';
 
@@ -882,6 +1031,72 @@ document.addEventListener('DOMContentLoaded', () => {
     searchLoading.style.display = 'none';
   });
 
+  // --- Pure Client Direct YouTube Scraper (Hoạt động độc lập không cần máy chủ PC) ---
+  async function searchYouTubeDirect(query) {
+    const urls = [
+      `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&hl=vi`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&hl=vi`)}`
+    ];
+
+    let html = '';
+    for (const url of urls) {
+      try {
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 6000);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(tid);
+        if (res.ok) {
+          const txt = await res.text();
+          if (txt && (txt.includes('ytInitialData') || txt.includes('videoRenderer'))) {
+            html = txt;
+            break;
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!html) throw new Error('Không thể tải kết quả YouTube trực tiếp');
+
+    const match = html.match(/ytInitialData\s*=\s*({.+?});<\/script>/s) || html.match(/var ytInitialData\s*=\s*({.+?});/);
+    if (!match) throw new Error('Không thể phân tích dữ liệu YouTube');
+
+    const data = JSON.parse(match[1]);
+    const sections = data?.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
+    const results = [];
+
+    for (const sec of sections) {
+      const items = sec?.itemSectionRenderer?.contents || [];
+      for (const item of items) {
+        const v = item.videoRenderer;
+        if (!v || !v.videoId) continue;
+
+        const title = v.title?.runs?.[0]?.text || (v.title?.simpleText) || 'Không rõ tiêu đề';
+        const artist = v.ownerText?.runs?.[0]?.text || v.shortBylineText?.runs?.[0]?.text || 'YouTube';
+        const duration = v.lengthText?.simpleText || '03:30';
+        const views = v.viewCountText?.simpleText || '';
+        const thumbs = v.thumbnail?.thumbnails || [];
+        const thumbnail = thumbs.length > 0 ? thumbs[thumbs.length - 1].url : `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`;
+
+        const parts = duration.split(':').map(Number);
+        let seconds = 0;
+        if (parts.length === 2) seconds = parts[0] * 60 + parts[1];
+        else if (parts.length === 3) seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+
+        results.push({
+          id: v.videoId,
+          title,
+          artist,
+          duration,
+          seconds,
+          views,
+          thumbnail
+        });
+      }
+    }
+
+    return results;
+  }
+
   async function performSearch(query) {
     if (!navigator.onLine) {
       searchOfflineNotice.style.display = 'block';
@@ -895,29 +1110,46 @@ document.addEventListener('DOMContentLoaded', () => {
     searchLoading.style.display = 'block';
     searchResultsList.innerHTML = '';
 
+    let results = null;
+
+    // 1. Thử gọi máy chủ PC trước với timeout 2.5 giây
     try {
-      const res = await fetch(`${getApiBase()}/api/search?q=${encodeURIComponent(query)}`);
-      const results = await res.json();
-
-      searchLoading.style.display = 'none';
-
-      if (!results || results.length === 0) {
-        searchResultsList.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-icon">🤷</div>
-            <div class="empty-title">Không tìm thấy bài hát</div>
-            <div class="empty-desc">Thử tìm kiếm với từ khóa khác xem sao.</div>
-          </div>
-        `;
-        return;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
+      const res = await fetch(`${getApiBase()}/api/search?q=${encodeURIComponent(query)}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        results = await res.json();
       }
-
-      renderSearchResults(results);
-    } catch (err) {
-      searchLoading.style.display = 'none';
-      showToast('Lỗi khi tìm kiếm, vui lòng thử lại.');
-      console.error('Search fetch error:', err);
+    } catch (localErr) {
+      console.log('Máy chủ PC không phản hồi, tự động chuyển sang tìm kiếm trực tiếp YouTube...');
     }
+
+    // 2. Nếu máy chủ PC đang tắt, tự động tìm kiếm trực tiếp từ YouTube trên điện thoại!
+    if (!results || results.length === 0) {
+      try {
+        results = await searchYouTubeDirect(query);
+      } catch (directErr) {
+        console.warn('Direct YouTube search error:', directErr);
+      }
+    }
+
+    searchLoading.style.display = 'none';
+
+    if (!results || results.length === 0) {
+      searchResultsList.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🤷</div>
+          <div class="empty-title">Không tìm thấy bài hát</div>
+          <div class="empty-desc">Thử tìm kiếm với từ khóa khác xem sao.</div>
+        </div>
+      `;
+      return;
+    }
+
+    renderSearchResults(results);
   }
 
   // --- REAL-TIME AUDIO DOWNLOAD WITH PROGRESS TRACKER ---
@@ -1073,12 +1305,18 @@ document.addEventListener('DOMContentLoaded', () => {
         dlBtnEl.classList.remove('downloading');
         dlBtnEl.innerHTML = '✕ THỬ LẠI';
       }
-      if (dlDockStatus) dlDockStatus.textContent = '✕ Lỗi tải bài hát, vui lòng thử lại';
-      if (cardProgressText) cardProgressText.textContent = '✕ Lỗi kết nối';
-      showToast('Tải bài hát thất bại, vui lòng kiểm tra kết nối!');
+      if (dlDockStatus) dlDockStatus.textContent = '✕ Máy chủ PC đang tắt';
+      if (cardProgressText) cardProgressText.textContent = '✕ Máy chủ PC tắt';
+
+      if (navigator.onLine) {
+        showToast('ℹ️ Máy tính đang tắt máy chủ Boxmusic. Bạn vẫn nghe trực tuyến được! Hãy bật máy chủ trên PC để lưu bài hát về máy offline.');
+      } else {
+        showToast('⚠️ Thiết bị không có kết nối mạng internet!');
+      }
 
       dockHideTimeout = setTimeout(() => {
         if (downloadDock) downloadDock.classList.add('hidden');
+        if (cardProgressWrap) cardProgressWrap.classList.add('hidden');
       }, 3500);
     }
   }

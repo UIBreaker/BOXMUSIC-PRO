@@ -1041,6 +1041,38 @@ body.retro-body {
   transition: width 0.3s ease;
 }
 
+.vault-backup-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn-vault-action {
+  flex: 1;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border: 1.5px solid #0f172a;
+  border-radius: 6px;
+  font-family: var(--font-pixel);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+  transition: all 0.1s;
+}
+
+.btn-vault-action:active {
+  transform: translate(1px, 1px);
+  box-shadow: none;
+  background: #e0e7ff;
+}
+
 .library-top-bar {
   display: flex;
   margin-bottom: 10px;
