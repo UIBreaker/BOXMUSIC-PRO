@@ -674,6 +674,15 @@ document.addEventListener('DOMContentLoaded', () => {
       storageStats.textContent = `${stats.count} bài • ${stats.totalMB} MB`;
       await updateDeviceStorageInfo(stats.count, stats.totalBytes || 0);
 
+      // Update Modern Dashboard Bar
+      const favCount = librarySongs.filter((s) => s.favorite).length;
+      const dashSongCount = document.getElementById('dash-song-count');
+      const dashStorageMb = document.getElementById('dash-storage-mb');
+      const dashFavCount = document.getElementById('dash-fav-count');
+      if (dashSongCount) dashSongCount.textContent = stats.count;
+      if (dashStorageMb) dashStorageMb.textContent = `${stats.totalMB} MB`;
+      if (dashFavCount) dashFavCount.textContent = favCount;
+
       downloadedIds.clear();
       librarySongs.forEach((s) => downloadedIds.add(s.id));
 
@@ -1343,16 +1352,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const sizeMB = (song.sizeBytes / (1024 * 1024)).toFixed(1);
 
       card.innerHTML = `
-        <img class="song-thumb" src="${thumbSrc}" alt="thumb">
+        <div class="song-cover-stack">
+          <div class="peeking-vinyl"></div>
+          <div class="song-thumb-frame">
+            <img class="song-thumb" src="${thumbSrc}" alt="thumb" loading="lazy">
+            <div class="card-play-overlay">
+              <span class="card-play-icon">${isNowPlaying ? '⏸' : '▶'}</span>
+            </div>
+          </div>
+        </div>
         <div class="song-info">
-          <div class="song-title">${escapeHtml(song.title)}</div>
+          <div class="song-title-row">
+            <span class="song-title">${escapeHtml(song.title)}</span>
+          </div>
           <div class="song-meta">
             <span class="badge-tag">${sourceBadge}</span>
-            <span>${song.artist || 'Không rõ nghệ sĩ'}</span>
-            <span>•</span>
-            <span>${song.duration || formatTime(song.seconds)}</span>
-            <span>•</span>
-            <span>${sizeMB} MB</span>
+            <span class="song-artist-name">${escapeHtml(song.artist || 'Không rõ ca sĩ')}</span>
+            <span class="meta-sep">•</span>
+            <span class="song-duration-pill">${song.duration || formatTime(song.seconds)}</span>
+            <span class="meta-sep">•</span>
+            <span class="song-size">${sizeMB} MB</span>
           </div>
         </div>
         <div class="song-actions">
@@ -1395,6 +1414,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const isFav = await window.musicDB.toggleFavorite(song.id);
         song.favorite = isFav;
         favBtn.classList.toggle('active', isFav);
+        const dashFav = document.getElementById('dash-fav-count');
+        if (dashFav) {
+          const currentFavs = librarySongs.filter((s) => s.favorite).length;
+          dashFav.textContent = currentFavs;
+        }
         showToast(isFav ? 'Đã thêm vào Yêu thích ❤️' : 'Đã bỏ Yêu thích');
         if (currentFilter === 'favorite') {
           renderLibraryList();
@@ -1949,6 +1973,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Player Event Listeners ---
+  const dynamicIsland = document.getElementById('dynamic-island');
+  const islandCapsule = document.getElementById('island-capsule');
+  const islandThumb = document.getElementById('island-thumb');
+  const islandTitle = document.getElementById('island-title');
+  const islandEq = document.getElementById('island-eq');
+  const islandTime = document.getElementById('island-time');
+  const islandExpThumb = document.getElementById('island-exp-thumb');
+  const islandExpTitle = document.getElementById('island-exp-title');
+  const islandExpArtist = document.getElementById('island-exp-artist');
+  const islandExpProgressBar = document.getElementById('island-exp-progress-bar');
+  const islandBtnCloseExp = document.getElementById('island-btn-close-exp');
+  const islandBtnPlay = document.getElementById('island-btn-play');
+  const islandBtnPrev = document.getElementById('island-btn-prev');
+  const islandBtnNext = document.getElementById('island-btn-next');
+  const islandBtnFull = document.getElementById('island-btn-full');
+  const toneArm = document.getElementById('tone-arm');
+  const btnMinimizePlayer = document.getElementById('btn-minimize-player');
+
   window.musicPlayer.on('track', (track) => {
     document.body.classList.add('has-mini-player');
     miniPlayer.classList.remove('hidden');
@@ -1960,6 +2002,14 @@ document.addEventListener('DOMContentLoaded', () => {
     playerArtist.textContent = track.artist || 'Không rõ nghệ sĩ';
     playerArt.src = track.coverUrl || 'icons/icon.svg';
     if (playerArtVinyl) playerArtVinyl.src = track.coverUrl || 'icons/icon.svg';
+
+    // Android Dynamic Island Sync
+    if (dynamicIsland) dynamicIsland.classList.remove('hidden');
+    if (islandThumb) islandThumb.src = track.coverUrl || 'icons/icon-192.png';
+    if (islandExpThumb) islandExpThumb.src = track.coverUrl || 'icons/icon-192.png';
+    if (islandTitle) islandTitle.textContent = track.title || 'Boxmusic';
+    if (islandExpTitle) islandExpTitle.textContent = track.title || 'Bài hát không tên';
+    if (islandExpArtist) islandExpArtist.textContent = track.artist || 'Không rõ nghệ sĩ';
 
     playerBtnFav.classList.toggle('active', !!track.favorite);
 
@@ -1974,17 +2024,24 @@ document.addEventListener('DOMContentLoaded', () => {
   window.musicPlayer.on('state', ({ isPlaying }) => {
     if (miniPlayIcon) miniPlayIcon.textContent = isPlaying ? '⏸' : '▶';
     if (playerPlayIcon) playerPlayIcon.textContent = isPlaying ? '⏸' : '▶';
+    if (islandBtnPlay) islandBtnPlay.textContent = isPlaying ? '⏸' : '▶';
 
     if (isPlaying) {
       if (vinylDisc) vinylDisc.classList.add('playing');
+      if (toneArm) toneArm.classList.add('playing');
       if (playerArt) playerArt.classList.add('playing');
       if (playerGlow) playerGlow.classList.add('active');
       if (miniPlayer) miniPlayer.classList.add('playing');
+      if (dynamicIsland) dynamicIsland.classList.add('is-playing');
+      if (islandEq) islandEq.classList.add('playing');
     } else {
       if (vinylDisc) vinylDisc.classList.remove('playing');
+      if (toneArm) toneArm.classList.remove('playing');
       if (playerArt) playerArt.classList.remove('playing');
       if (playerGlow) playerGlow.classList.remove('active');
       if (miniPlayer) miniPlayer.classList.remove('playing');
+      if (dynamicIsland) dynamicIsland.classList.remove('is-playing');
+      if (islandEq) islandEq.classList.remove('playing');
     }
   });
 
@@ -2015,6 +2072,9 @@ document.addEventListener('DOMContentLoaded', () => {
       playerTimeTotal.textContent = formatTime(duration);
       miniProgressFill.style.width = `${percent}%`;
     }
+    // Dynamic Island time & progress bar sync
+    if (islandTime) islandTime.textContent = formatTime(currentTime);
+    if (islandExpProgressBar) islandExpProgressBar.style.width = `${percent}%`;
   });
 
   window.musicPlayer.on('mode', ({ isShuffle, repeatMode }) => {
@@ -2053,6 +2113,55 @@ document.addEventListener('DOMContentLoaded', () => {
   btnClosePlayer.addEventListener('click', () => {
     fullPlayer.classList.remove('open');
   });
+
+  if (btnMinimizePlayer) {
+    btnMinimizePlayer.addEventListener('click', () => {
+      fullPlayer.classList.remove('open');
+    });
+  }
+
+  // Dynamic Island interactive gestures & controls
+  if (islandCapsule && dynamicIsland) {
+    islandCapsule.addEventListener('click', () => {
+      dynamicIsland.classList.add('expanded');
+    });
+  }
+
+  if (islandBtnCloseExp && dynamicIsland) {
+    islandBtnCloseExp.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dynamicIsland.classList.remove('expanded');
+    });
+  }
+
+  if (islandBtnPlay) {
+    islandBtnPlay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.musicPlayer.togglePlay();
+    });
+  }
+
+  if (islandBtnPrev) {
+    islandBtnPrev.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.musicPlayer.prev();
+    });
+  }
+
+  if (islandBtnNext) {
+    islandBtnNext.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.musicPlayer.next();
+    });
+  }
+
+  if (islandBtnFull && fullPlayer) {
+    islandBtnFull.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (dynamicIsland) dynamicIsland.classList.remove('expanded');
+      fullPlayer.classList.add('open');
+    });
+  }
 
   playerBtnPlay.addEventListener('click', () => {
     window.musicPlayer.togglePlay();

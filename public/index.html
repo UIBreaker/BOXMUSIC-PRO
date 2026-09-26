@@ -19,10 +19,54 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/app.css?v=1.0.4">
+  <link rel="stylesheet" href="css/app.css?v=1.0.5">
 </head>
 <body class="retro-body">
   <div id="app">
+
+    <!-- ========================================================
+         ANDROID DYNAMIC ISLAND (TOP CENTER CAMERA CUTOUT)
+         ======================================================== -->
+    <div id="dynamic-island" class="dynamic-island hidden">
+      <div class="island-capsule" id="island-capsule">
+        <div class="island-art-wrap">
+          <img id="island-thumb" class="island-thumb" src="icons/icon-192.png" alt="Mini Art">
+        </div>
+        <div class="island-meta-wrap">
+          <span id="island-title" class="island-title">Boxmusic</span>
+          <div class="island-equalizer" id="island-eq">
+            <span class="eq-b b1"></span>
+            <span class="eq-b b2"></span>
+            <span class="eq-b b3"></span>
+            <span class="eq-b b4"></span>
+          </div>
+        </div>
+        <div class="island-tail">
+          <span id="island-time" class="island-time">0:00</span>
+        </div>
+      </div>
+
+      <!-- Expanded Island (Opens on tap) -->
+      <div class="island-expanded" id="island-expanded">
+        <div class="island-exp-header">
+          <img id="island-exp-thumb" class="island-exp-thumb" src="icons/icon-192.png" alt="Cover">
+          <div class="island-exp-info">
+            <div id="island-exp-title" class="island-exp-title">Tên bài hát</div>
+            <div id="island-exp-artist" class="island-exp-artist">Nghệ sĩ</div>
+          </div>
+          <button id="island-btn-close-exp" class="island-exp-close" type="button" aria-label="Thu nhỏ">✕</button>
+        </div>
+        <div class="island-exp-progress">
+          <div id="island-exp-progress-bar" class="island-exp-progress-fill"></div>
+        </div>
+        <div class="island-exp-controls">
+          <button id="island-btn-prev" class="island-ctrl" type="button" aria-label="Trước">⏮</button>
+          <button id="island-btn-play" class="island-ctrl play-btn" type="button" aria-label="Phát">▶</button>
+          <button id="island-btn-next" class="island-ctrl" type="button" aria-label="Tiếp">⏭</button>
+          <button id="island-btn-full" class="island-ctrl full-btn" type="button" title="Mở toàn màn hình">🗖</button>
+        </div>
+      </div>
+    </div>
 
     <!-- ========================================================
          INTRO SPLASH: RETRO BOOT & MUSIC BOX ZOOM SEQUENCE
@@ -197,7 +241,7 @@
         <div class="os-icon">💾</div>
         <div class="os-title-col">
           <span class="os-window-name">BOXMUSIC.EXE</span>
-          <span id="greeting-time" class="os-substatus">HỆ THỐNG V1.0.4</span>
+          <span id="greeting-time" class="os-substatus">HỆ THỐNG V1.0.5</span>
         </div>
       </div>
       <div class="header-actions-row">
@@ -216,6 +260,31 @@
       
       <!-- TAB 1: THƯ VIỆN OFFLINE -->
       <section id="library-view" class="view-panel active">
+        <!-- Modern Clear Stats Dashboard -->
+        <div class="library-dashboard-bar">
+          <div class="dash-stat-item">
+            <span class="dash-icon">🎵</span>
+            <div class="dash-stat-info">
+              <span class="dash-val" id="dash-song-count">0</span>
+              <span class="dash-lbl">BÀI HÁT</span>
+            </div>
+          </div>
+          <div class="dash-stat-item">
+            <span class="dash-icon">💾</span>
+            <div class="dash-stat-info">
+              <span class="dash-val" id="dash-storage-mb">0 MB</span>
+              <span class="dash-lbl">BỘ NHỚ</span>
+            </div>
+          </div>
+          <div class="dash-stat-item">
+            <span class="dash-icon">❤️</span>
+            <div class="dash-stat-info">
+              <span class="dash-val" id="dash-fav-count">0</span>
+              <span class="dash-lbl">YÊU THÍCH</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Retro Window Container for Library -->
         <div class="retro-window-box">
           <div class="retro-window-header-sm">
@@ -407,12 +476,10 @@
       <!-- Window Title Bar -->
       <div class="retro-title-bar player-win-bar">
         <div class="retro-title-text">
-          <span class="pixel-icon-disk">📻</span> NOW_PLAYING.EXE
+          <span class="pixel-icon-disk">📻</span> C:\MUSIC\TURNTABLE.EXE
         </div>
         <div class="retro-window-controls">
-          <button id="btn-toggle-art-mode" class="win-btn-gray-sm" type="button" title="Đổi kiểu hiển thị">
-            <span id="art-mode-text">DISC 💿</span>
-          </button>
+          <button id="btn-minimize-player" class="win-btn-gray-sm" type="button" title="Thu nhỏ">🗕</button>
           <button id="btn-close-player" class="win-btn-red" type="button" aria-label="Close">✕</button>
         </div>
       </div>
@@ -420,24 +487,28 @@
       <!-- Ambient Dynamic Glow Backdrop -->
       <div id="player-glow" class="player-glow"></div>
 
-      <!-- Artwork Showcase: Switchable Card / Vinyl -->
-      <div class="album-art-wrap retro-art-frame">
-        <!-- MODE 1: Retro Pixel Frame Card -->
-        <div id="retro-card-view" class="retro-card-container">
-          <div class="retro-art-border">
-            <img id="player-art" class="retro-big-card-art" src="icons/icon.svg" alt="Album Art">
-            <div class="retro-art-glare"></div>
-          </div>
-        </div>
-
-        <!-- MODE 2: Retro Vinyl Disc -->
-        <div id="retro-vinyl-view" class="vinyl-container" style="display: none;">
-          <div class="vinyl-disc" id="vinyl-disc">
-            <div class="vinyl-shine"></div>
-            <div class="vinyl-groove-lines"></div>
-            <div class="vinyl-center">
-              <img id="player-art-vinyl" class="album-art" src="icons/icon.svg" alt="Album Art">
-              <div class="vinyl-hole"></div>
+      <!-- Permanent Retro Vinyl Turntable Showcase (Chỉ hiện đĩa xoay theo yêu cầu) -->
+      <div class="turntable-deck-frame">
+        <div class="turntable-deck">
+          <!-- The Rotating Vinyl Disc -->
+          <div class="vinyl-container">
+            <div class="vinyl-disc" id="vinyl-disc">
+              <div class="vinyl-shine"></div>
+              <div class="vinyl-groove-lines"></div>
+              <div class="vinyl-center">
+                <img id="player-art-vinyl" class="album-art" src="icons/icon-192.png" alt="Album Art">
+                <div class="vinyl-hole"></div>
+              </div>
+            </div>
+            <!-- Turntable Stylus / Tone Arm (Kim đĩa than xoay vào đĩa khi phát nhạc) -->
+            <div class="tone-arm-assembly" id="tone-arm">
+              <div class="tone-arm-base"></div>
+              <div class="tone-arm-pivot"></div>
+              <div class="tone-arm-rod"></div>
+              <div class="tone-arm-head">
+                <div class="tone-arm-cartridge"></div>
+                <div class="tone-arm-needle"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -664,7 +735,7 @@
           <!-- 4. Version info -->
           <div class="settings-card-section version-sec">
             <div class="version-row">
-              <span><b>Phiên bản:</b> Boxmusic Pro v1.0.4 (Offline Engine)</span>
+              <span><b>Phiên bản:</b> Boxmusic Pro v1.0.5 (Dynamic Island & Turntable)</span>
               <span><b>Cơ chế:</b> IndexedDB Persistence + YouTube InnerTube</span>
             </div>
           </div>
@@ -765,8 +836,8 @@
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <!-- Scripts -->
-  <script src="js/db.js?v=1.0.4"></script>
-  <script src="js/player.js?v=1.0.4"></script>
-  <script src="js/app.js?v=1.0.4"></script>
+  <script src="js/db.js?v=1.0.5"></script>
+  <script src="js/player.js?v=1.0.5"></script>
+  <script src="js/app.js?v=1.0.5"></script>
 </body>
 </html>
