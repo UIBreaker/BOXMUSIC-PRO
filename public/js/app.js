@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Full Player Elements
   const fullPlayer = document.getElementById('full-player');
   const btnClosePlayer = document.getElementById('btn-close-player');
-  const playerArt = document.getElementById('player-art');
+  const playerArt = document.getElementById('player-art-vinyl') || document.getElementById('player-art');
   const playerTitle = document.getElementById('player-title');
   const playerArtist = document.getElementById('player-artist');
   const playerBtnFav = document.getElementById('player-btn-fav');
@@ -2012,14 +2012,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const finalCover = trackArt || 'icons/icon-192.png';
 
-    playerArt.src = finalCover;
-    if (playerArtVinyl) playerArtVinyl.src = finalCover;
-    miniThumb.src = finalCover;
+    const setSafeArt = (imgEl) => {
+      if (!imgEl) return;
+      imgEl.src = finalCover;
+      imgEl.onerror = () => {
+        const cleanId = String(track.id || '').replace(/^yt_/, '').trim();
+        if (cleanId && cleanId.length === 11 && !imgEl.src.includes('mqdefault')) {
+          imgEl.src = `https://i.ytimg.com/vi/${cleanId}/mqdefault.jpg`;
+        } else {
+          imgEl.src = 'icons/icon-192.png';
+        }
+      };
+    };
+
+    setSafeArt(playerArt);
+    if (playerArtVinyl && playerArtVinyl !== playerArt) {
+      setSafeArt(playerArtVinyl);
+    }
+    setSafeArt(miniThumb);
 
     // Android Dynamic Island Sync
     if (dynamicIsland) dynamicIsland.classList.remove('hidden');
-    if (islandThumb) islandThumb.src = finalCover;
-    if (islandExpThumb) islandExpThumb.src = finalCover;
+    if (islandThumb) setSafeArt(islandThumb);
+    if (islandExpThumb) setSafeArt(islandExpThumb);
     if (islandTitle) islandTitle.textContent = track.title || 'Boxmusic';
     if (islandExpTitle) islandExpTitle.textContent = track.title || 'Bài hát không tên';
     if (islandExpArtist) islandExpArtist.textContent = track.artist || 'Không rõ nghệ sĩ';
@@ -2063,8 +2078,9 @@ document.addEventListener('DOMContentLoaded', () => {
     btnVisualMode.addEventListener('click', () => {
       const mode = window.musicPlayer.toggleVisualMode();
       const isNeon = mode === 1;
-      visualModeText.textContent = isNeon ? 'Hiệu ứng: Sóng Neon' : 'Hiệu ứng: Dải Cyber';
-      showToast(isNeon ? '⚡ Đổi hiệu ứng: Sóng Âm Neon' : '⚡ Đổi hiệu ứng: Dải Phổ Cyber');
+      if (visualModeText) visualModeText.textContent = isNeon ? 'LED PHỔ' : 'CYBER';
+      btnVisualMode.classList.toggle('active', isNeon);
+      showToast(isNeon ? '⚡ Chế độ: LED Phổ 8-Bit Nhảy Bass' : '⚡ Chế độ: Dải Sóng Cyber');
     });
   }
 
@@ -2072,7 +2088,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnFxBass.addEventListener('click', () => {
       const isBoosted = window.musicPlayer.toggleBassBoost();
       btnFxBass.classList.toggle('active', isBoosted);
-      bassModeText.textContent = isBoosted ? 'Bass Boost: BẬT 🔥' : 'Bass Boost: Tắt';
+      if (bassModeText) bassModeText.textContent = isBoosted ? 'BASS 🔥' : 'BASS';
       showToast(isBoosted ? '🔥 Đã kích hoạt Siêu Âm Trầm (Bass Boost)' : 'Bass Boost: Đã tắt');
     });
   }
@@ -2209,31 +2225,52 @@ document.addEventListener('DOMContentLoaded', () => {
     loadLibrary();
   });
 
+  // Smart Player More Menu Popover
+  const btnPlayerMore = document.getElementById('btn-player-more');
+  const playerMoreMenu = document.getElementById('player-more-menu');
+  if (btnPlayerMore && playerMoreMenu) {
+    btnPlayerMore.addEventListener('click', (e) => {
+      e.stopPropagation();
+      playerMoreMenu.classList.toggle('hidden');
+    });
+    document.addEventListener('click', (e) => {
+      if (!playerMoreMenu.contains(e.target) && e.target !== btnPlayerMore) {
+        playerMoreMenu.classList.add('hidden');
+      }
+    });
+  }
+
   // Export audio file
-  btnExportAudio.addEventListener('click', () => {
-    const cur = window.musicPlayer.getCurrentSong();
-    if (!cur || !cur.audioBlob) {
-      showToast('Bài này đang phát từ luồng trực tuyến, hãy tải về trước.');
-      return;
-    }
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(cur.audioBlob);
-    a.download = `${cur.title || 'song'}.m4a`;
-    a.click();
-    showToast('Đang xuất tệp âm thanh về máy...');
-  });
+  if (btnExportAudio) {
+    btnExportAudio.addEventListener('click', () => {
+      if (playerMoreMenu) playerMoreMenu.classList.add('hidden');
+      const cur = window.musicPlayer.getCurrentSong();
+      if (!cur || !cur.audioBlob) {
+        showToast('Bài này đang phát từ luồng trực tuyến, hãy tải về trước.');
+        return;
+      }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(cur.audioBlob);
+      a.download = `${cur.title || 'song'}.m4a`;
+      a.click();
+      showToast('Đang xuất tệp âm thanh về máy...');
+    });
+  }
 
   // Delete current playing song
-  btnDeleteCurrent.addEventListener('click', async () => {
-    const cur = window.musicPlayer.getCurrentSong();
-    if (!cur) return;
-    if (confirm(`Bạn muốn xóa bài "${cur.title}" khỏi máy?`)) {
-      await window.musicDB.deleteSong(cur.id);
-      showToast(`Đã xóa "${cur.title}"`);
-      window.musicPlayer.next();
-      loadLibrary();
-    }
-  });
+  if (btnDeleteCurrent) {
+    btnDeleteCurrent.addEventListener('click', async () => {
+      if (playerMoreMenu) playerMoreMenu.classList.add('hidden');
+      const cur = window.musicPlayer.getCurrentSong();
+      if (!cur) return;
+      if (confirm(`Bạn muốn xóa bài "${cur.title}" khỏi máy?`)) {
+        await window.musicDB.deleteSong(cur.id);
+        showToast(`Đã xóa "${cur.title}"`);
+        window.musicPlayer.next();
+        loadLibrary();
+      }
+    });
+  }
 
   // Helpers
   function escapeHtml(str) {

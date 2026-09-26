@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/app.css?v=1.0.6">
+  <link rel="stylesheet" href="css/app.css?v=1.0.7">
 </head>
 <body class="retro-body">
   <div id="app">
@@ -241,7 +241,7 @@
         <div class="os-icon">💾</div>
         <div class="os-title-col">
           <span class="os-window-name">BOXMUSIC.EXE</span>
-          <span id="greeting-time" class="os-substatus">HỆ THỐNG V1.0.6</span>
+          <span id="greeting-time" class="os-substatus">HỆ THỐNG V1.0.7</span>
         </div>
       </div>
       <div class="header-actions-row">
@@ -569,28 +569,35 @@
         </button>
       </div>
 
-      <!-- Sleek Unified Smart Action Bar (Clean single-row UI) -->
+      <!-- Sleek Retro Action Toolbar (Clean 4-pill layout) -->
       <div class="player-smart-bar">
         <button id="btn-player-add-playlist" class="smart-tool-btn" type="button" title="Thêm vào Playlist">
           <span class="tool-icon">📑</span>
-          <span class="tool-label">Playlist</span>
+          <span class="tool-label">PLAYLIST</span>
         </button>
         <button id="btn-fx-bass" class="smart-tool-btn" type="button" title="Siêu âm trầm">
           <span class="tool-icon">🔥</span>
-          <span class="tool-label" id="bass-mode-text">Bass</span>
+          <span class="tool-label" id="bass-mode-text">BASS</span>
         </button>
         <button id="btn-visual-mode" class="smart-tool-btn active" type="button" title="Chế độ LED phổ">
           <span class="tool-icon">⚡</span>
-          <span class="tool-label" id="visual-mode-text">LED</span>
+          <span class="tool-label" id="visual-mode-text">LED PHỔ</span>
         </button>
-        <button id="btn-export-audio" class="smart-tool-btn" type="button" title="Lưu tệp về máy">
-          <span class="tool-icon">💾</span>
-          <span class="tool-label">Lưu tệp</span>
-        </button>
-        <button id="btn-delete-current" class="smart-tool-btn danger" type="button" title="Xóa bài hát">
-          <span class="tool-icon">🗑️</span>
-          <span class="tool-label">Xóa</span>
-        </button>
+        <div class="player-more-wrap">
+          <button id="btn-player-more" class="smart-tool-btn" type="button" title="Tùy chọn khác">
+            <span class="tool-icon">⋯</span>
+            <span class="tool-label">THÊM</span>
+          </button>
+          <!-- Floating Retro Popover Menu -->
+          <div id="player-more-menu" class="player-more-menu hidden">
+            <button id="btn-export-audio" class="more-menu-item" type="button">
+              <span>💾 Lưu tệp MP3</span>
+            </button>
+            <button id="btn-delete-current" class="more-menu-item danger" type="button">
+              <span>🗑️ Xóa khỏi máy</span>
+            </button>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -735,7 +742,7 @@
           <!-- 4. Version info -->
           <div class="settings-card-section version-sec">
             <div class="version-row">
-              <span><b>Phiên bản:</b> Boxmusic Pro v1.0.6 (Poco Dynamic Island & Bass Beats)</span>
+              <span><b>Phiên bản:</b> Boxmusic Pro v1.0.7 (Smart Controls, Dynamic Island & Bass Visualizer)</span>
               <span><b>Cơ chế:</b> IndexedDB Persistence + YouTube InnerTube</span>
             </div>
           </div>
@@ -836,8 +843,8 @@
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <!-- Scripts -->
-  <script src="js/db.js?v=1.0.6"></script>
-  <script src="js/player.js?v=1.0.6"></script>
-  <script src="js/app.js?v=1.0.6"></script>
+  <script src="js/db.js?v=1.0.7"></script>
+  <script src="js/player.js?v=1.0.7"></script>
+  <script src="js/app.js?v=1.0.7"></script>
 </body>
 </html>

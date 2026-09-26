@@ -37,7 +37,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 
 // Health check / ping endpoint for LAN discovery
 app.get('/api/ping', (req, res) => {
-  res.json({ ok: true, version: '1.0.6', time: Date.now() });
+  res.json({ ok: true, version: '1.0.7', time: Date.now() });
 });
 
 // API: Search songs worldwide

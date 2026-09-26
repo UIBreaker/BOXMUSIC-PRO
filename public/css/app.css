@@ -2022,7 +2022,7 @@ body.retro-body {
   box-shadow: 0 2px 8px rgba(29, 78, 216, 0.25), 0px 1px 0px #0f172a;
 }
 
-/* Single-Row Smart Toolbar (Clean, Pro & Balanced) */
+/* Single-Row Retro Toolbar (Clean, Pro & Balanced) */
 .player-smart-bar {
   display: flex;
   align-items: center;
@@ -2030,64 +2030,119 @@ body.retro-body {
   gap: 6px;
   width: 100%;
   max-width: 360px;
-  margin: 8px auto 0;
+  margin: 10px auto 0;
   padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-radius: 14px;
-  border: 2px solid #cbd5e1;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  z-index: 5;
+  border-radius: 12px;
+  border: 2px solid #334155;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 20;
 }
 
 .smart-tool-btn {
   flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  padding: 6px 2px;
+  gap: 4px;
+  padding: 8px 4px;
   background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  color: #475569;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  color: #1e293b;
   cursor: pointer;
-  transition: all 0.15s ease;
+  box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.12);
+  transition: all 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
 }
 
 .smart-tool-btn:active {
-  transform: scale(0.94);
+  transform: translate(1px, 1px);
+  box-shadow: none;
 }
 
 .smart-tool-btn .tool-icon {
-  font-size: 1.05rem;
+  font-size: 0.9rem;
   line-height: 1;
 }
 
 .smart-tool-btn .tool-label {
   font-family: var(--font-pixel);
-  font-size: 0.55rem;
+  font-size: 0.58rem;
   font-weight: 700;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.3px;
 }
 
 .smart-tool-btn.active {
+  background: #dbeafe;
+  border-color: var(--retro-blue);
+  color: var(--retro-blue);
+  box-shadow: 1px 1px 0px var(--retro-blue);
+}
+
+.player-more-wrap {
+  position: relative;
+  flex: 0.85;
+  display: flex;
+}
+
+.player-more-wrap .smart-tool-btn {
+  width: 100%;
+}
+
+.player-more-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: #ffffff;
+  border: 2.5px solid #0f172a;
+  border-radius: 10px;
+  box-shadow: 4px 6px 0px rgba(0, 0, 0, 0.25);
+  padding: 6px;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 100;
+}
+
+.player-more-menu.hidden {
+  display: none;
+}
+
+.more-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 6px;
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #1e293b;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.1s ease;
+}
+
+.more-menu-item:hover, .more-menu-item:active {
   background: #eff6ff;
   border-color: var(--retro-blue);
   color: var(--retro-blue);
-  box-shadow: 0 2px 6px rgba(29, 78, 216, 0.15);
 }
 
-.smart-tool-btn.danger {
-  color: #64748b;
-}
-
-.smart-tool-btn.danger:active {
+.more-menu-item.danger {
   color: #ef4444;
-  border-color: #fca5a5;
-  background: #fef2f2;
+}
+
+.more-menu-item.danger:hover, .more-menu-item.danger:active {
+  background: #fee2e2;
+  border-color: #ef4444;
 }
 
 /* Toast Container - Positioned at bottom so it NEVER blocks search input or headers */
