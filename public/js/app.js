@@ -2031,13 +2031,46 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     setSafeArt(miniThumb);
 
-    // Android Dynamic Island Sync
-    if (dynamicIsland) dynamicIsland.classList.remove('hidden');
-    if (islandThumb) setSafeArt(islandThumb);
-    if (islandExpThumb) setSafeArt(islandExpThumb);
-    if (islandTitle) islandTitle.textContent = track.title || 'Boxmusic';
-    if (islandExpTitle) islandExpTitle.textContent = track.title || 'Bài hát không tên';
-    if (islandExpArtist) islandExpArtist.textContent = track.artist || 'Không rõ nghệ sĩ';
+    // Send high-res track artwork to native Android Dynamic Island / MediaSession
+    const syncNativeIslandArt = () => {
+      if (!window.AndroidBridge || typeof window.AndroidBridge.updateMedia !== 'function') return;
+      const isPlaying = window.musicPlayer ? window.musicPlayer.isPlaying : true;
+      try {
+        if (playerArtVinyl && playerArtVinyl.complete && playerArtVinyl.naturalWidth > 0) {
+          const cvs = document.createElement('canvas');
+          cvs.width = 160;
+          cvs.height = 160;
+          const cctx = cvs.getContext('2d');
+          cctx.drawImage(playerArtVinyl, 0, 0, 160, 160);
+          const b64 = cvs.toDataURL('image/jpeg', 0.85);
+          window.AndroidBridge.updateMedia(
+            track.title || 'Boxmusic',
+            track.artist || 'Không rõ nghệ sĩ',
+            b64,
+            isPlaying
+          );
+          return;
+        }
+      } catch (e) {
+        // Fallback to URL if canvas tainted
+      }
+      window.AndroidBridge.updateMedia(
+        track.title || 'Boxmusic',
+        track.artist || 'Không rõ nghệ sĩ',
+        finalCover,
+        isPlaying
+      );
+    };
+
+    if (playerArtVinyl) {
+      if (playerArtVinyl.complete && playerArtVinyl.naturalWidth > 0) {
+        syncNativeIslandArt();
+      } else {
+        playerArtVinyl.onload = syncNativeIslandArt;
+      }
+    } else {
+      syncNativeIslandArt();
+    }
 
     playerBtnFav.classList.toggle('active', !!track.favorite);
 
@@ -2078,7 +2111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnVisualMode.addEventListener('click', () => {
       const mode = window.musicPlayer.toggleVisualMode();
       const isNeon = mode === 1;
-      if (visualModeText) visualModeText.textContent = isNeon ? 'LED PHỔ' : 'CYBER';
+      if (visualModeText) visualModeText.textContent = isNeon ? 'LED' : 'CYBER';
       btnVisualMode.classList.toggle('active', isNeon);
       showToast(isNeon ? '⚡ Chế độ: LED Phổ 8-Bit Nhảy Bass' : '⚡ Chế độ: Dải Sóng Cyber');
     });

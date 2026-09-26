@@ -84,8 +84,8 @@ async function build() {
   const manifestContent = `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.boxmusic.player"
-    android:versionCode="8"
-    android:versionName="1.0.7">
+    android:versionCode="9"
+    android:versionName="1.0.8">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
@@ -147,6 +147,7 @@ import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -165,6 +166,7 @@ public class MainActivity extends Activity {
     private WebView webView;
     private MediaSession mediaSession;
     private NotificationManager notificationManager;
+    private PowerManager.WakeLock wakeLock;
     private static final String CHANNEL_ID = "boxmusic_live_channel";
     private static final int NOTIF_ID = 1088;
     private static final String ASSET_URL = "file:///android_asset/index.html";
@@ -192,6 +194,14 @@ public class MainActivity extends Activity {
         }
 
         applyFullScreen();
+
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null) {
+                wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Boxmusic:AudioLock");
+                wakeLock.setReferenceCounted(false);
+            }
+        } catch (Exception ignored) {}
 
         initMediaSession();
 
@@ -308,6 +318,17 @@ public class MainActivity extends Activity {
                 currentArtist = (artist != null && !artist.isEmpty()) ? artist : "Dang phat";
                 currentIsPlaying = isPlaying;
 
+                // Manage WakeLock to prevent audio crackle/stutter when screen turns off
+                if (currentIsPlaying) {
+                    if (wakeLock != null && !wakeLock.isHeld()) {
+                        try { wakeLock.acquire(); } catch (Exception ignored) {}
+                    }
+                } else {
+                    if (wakeLock != null && wakeLock.isHeld()) {
+                        try { wakeLock.release(); } catch (Exception ignored) {}
+                    }
+                }
+
                 updateNotificationAndSession(coverUrl);
             });
         }
@@ -316,18 +337,42 @@ public class MainActivity extends Activity {
     private void updateNotificationAndSession(final String coverUrl) {
         if (mediaSession == null) return;
 
+        // 1. Direct Base64 Image Support (Immediate offline / cached decoded bitmap)
+        if (coverUrl != null && coverUrl.startsWith("data:image")) {
+            try {
+                int comma = coverUrl.indexOf(',');
+                if (comma > 0) {
+                    byte[] decoded = android.util.Base64.decode(coverUrl.substring(comma + 1), android.util.Base64.DEFAULT);
+                    Bitmap bmp = BitmapFactory.decodeByteArray(decoded, 0, decoded.length);
+                    if (bmp != null) {
+                        currentCover = bmp;
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            postMediaNotification();
+            return;
+        }
+
+        // 2. HTTP/HTTPS Network URL with Mobile Browser User-Agent
         if (coverUrl != null && (coverUrl.startsWith("http://") || coverUrl.startsWith("https://"))) {
             new Thread(() -> {
                 try {
                     URL url = new URL(coverUrl);
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                     conn.setDoInput(true);
-                    conn.setConnectTimeout(3000);
+                    conn.setInstanceFollowRedirects(true);
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36");
+                    conn.setConnectTimeout(4000);
+                    conn.setReadTimeout(4000);
                     conn.connect();
-                    InputStream input = conn.getInputStream();
-                    Bitmap bmp = BitmapFactory.decodeStream(input);
-                    if (bmp != null) {
-                        currentCover = bmp;
+                    if (conn.getResponseCode() == 200) {
+                        InputStream input = conn.getInputStream();
+                        Bitmap bmp = BitmapFactory.decodeStream(input);
+                        if (bmp != null) {
+                            currentCover = bmp;
+                        }
                     }
                 } catch (Exception ignored) {}
                 runOnUiThread(() -> postMediaNotification());
@@ -458,6 +503,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (wakeLock != null && wakeLock.isHeld()) {
+            try { wakeLock.release(); } catch (Exception ignored) {}
+        }
         if (mediaSession != null) {
             mediaSession.release();
         }

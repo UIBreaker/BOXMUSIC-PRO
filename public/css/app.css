@@ -2085,12 +2085,22 @@ body.retro-body {
 
 .player-more-wrap {
   position: relative;
-  flex: 0.85;
+  flex: 0 0 38px;
   display: flex;
 }
 
 .player-more-wrap .smart-tool-btn {
-  width: 100%;
+  width: 38px;
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-more-wrap .tool-icon {
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .player-more-menu {
@@ -2881,15 +2891,56 @@ body.has-mini-player .retro-dl-dock {
   display: flex;
   gap: 6px;
   margin-bottom: 8px;
+  align-items: stretch;
 }
 
 .server-input-row input {
   flex: 1;
+  height: 36px;
+  padding: 0 10px;
+}
+
+.server-input-row button {
+  height: 36px;
+  padding: 0 14px;
+  white-space: nowrap;
 }
 
 .server-actions-row {
   display: flex;
-  gap: 6px;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.server-action-btn {
+  flex: 1;
+  width: auto !important;
+  height: auto !important;
+  min-height: 34px;
+  padding: 6px 10px;
+  background: var(--win-gray-bg);
+  border-top: 2px solid var(--win-gray-light);
+  border-left: 2px solid var(--win-gray-light);
+  border-right: 2px solid var(--win-gray-shadow);
+  border-bottom: 2px solid var(--win-gray-shadow);
+  font-family: var(--font-pixel);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #000;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.server-action-btn:active {
+  border-top: 2px solid var(--win-gray-shadow);
+  border-left: 2px solid var(--win-gray-shadow);
+  border-right: 2px solid var(--win-gray-light);
+  border-bottom: 2px solid var(--win-gray-light);
+  transform: translate(1px, 1px);
 }
 
 .server-ping-status {
@@ -3063,13 +3114,8 @@ body.has-mini-player .retro-dl-dock {
    ANDROID DYNAMIC ISLAND (TOP CENTER CAMERA CUTOUT)
    ======================================================== */
 .dynamic-island {
-  position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 99990;
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: auto;
+  display: none !important;
+  pointer-events: none !important;
 }
 
 .dynamic-island.hidden {
@@ -3658,7 +3704,8 @@ body.has-mini-player .retro-dl-dock {
 }
 
 /* Minimize button in full player bar */
-.win-btn-gray-sm {
+#btn-minimize-player,
+.win-btn-icon-sm {
   background: #cbd5e1;
   border: 2px solid #475569;
   color: #1e293b;
@@ -3674,7 +3721,8 @@ body.has-mini-player .retro-dl-dock {
   box-shadow: 1.5px 1.5px 0px rgba(0, 0, 0, 0.2);
 }
 
-.win-btn-gray-sm:active {
+#btn-minimize-player:active,
+.win-btn-icon-sm:active {
   transform: translate(1px, 1px);
   box-shadow: none;
 }

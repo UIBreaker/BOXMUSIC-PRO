@@ -468,8 +468,13 @@ class MusicPlayer {
   }
 
   _startVisualizerLoop() {
+    let animId = null;
     const draw = () => {
-      requestAnimationFrame(draw);
+      if (document.hidden) {
+        animId = null;
+        return;
+      }
+      animId = requestAnimationFrame(draw);
       if (!this.canvas || !this.canvasCtx) return;
 
       const canvas = this.canvas;
@@ -603,7 +608,15 @@ class MusicPlayer {
       }
     };
 
-    requestAnimationFrame(draw);
+    animId = requestAnimationFrame(draw);
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && this.isPlaying && !animId) {
+          animId = requestAnimationFrame(draw);
+        }
+      });
+    }
   }
 
   _renderNeonWaves(ctx, w, h, barHeights, peakHeights, numBars) {
