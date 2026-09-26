@@ -1808,14 +1808,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Save into IndexedDB
+      const cleanYtId = String(item.id).replace(/^yt_/, '').trim();
       const savedSong = {
-        id: `yt_${item.id}`,
+        id: `yt_${cleanYtId}`,
         title: item.title,
         artist: item.artist,
         duration: item.duration,
         seconds: item.seconds,
         audioBlob: audioBlob,
         thumbnailBlob: thumbBlob,
+        thumbnail: item.thumbnail || `https://i.ytimg.com/vi/${cleanYtId}/hqdefault.jpg`,
         audioMime: 'audio/mp4',
         sizeBytes: audioBlob.size,
         source: 'youtube',
@@ -2000,13 +2002,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     playerTitle.textContent = track.title || 'Bài hát không tên';
     playerArtist.textContent = track.artist || 'Không rõ nghệ sĩ';
-    playerArt.src = track.coverUrl || 'icons/icon.svg';
-    if (playerArtVinyl) playerArtVinyl.src = track.coverUrl || 'icons/icon.svg';
+
+    let trackArt = track.coverUrl;
+    if (!trackArt || trackArt.includes('icon.svg') || trackArt.includes('icon-192.png')) {
+      const cleanId = String(track.id || '').replace(/^yt_/, '').trim();
+      if (cleanId && cleanId.length === 11) {
+        trackArt = `https://i.ytimg.com/vi/${cleanId}/hqdefault.jpg`;
+      }
+    }
+    const finalCover = trackArt || 'icons/icon-192.png';
+
+    playerArt.src = finalCover;
+    if (playerArtVinyl) playerArtVinyl.src = finalCover;
+    miniThumb.src = finalCover;
 
     // Android Dynamic Island Sync
     if (dynamicIsland) dynamicIsland.classList.remove('hidden');
-    if (islandThumb) islandThumb.src = track.coverUrl || 'icons/icon-192.png';
-    if (islandExpThumb) islandExpThumb.src = track.coverUrl || 'icons/icon-192.png';
+    if (islandThumb) islandThumb.src = finalCover;
+    if (islandExpThumb) islandExpThumb.src = finalCover;
     if (islandTitle) islandTitle.textContent = track.title || 'Boxmusic';
     if (islandExpTitle) islandExpTitle.textContent = track.title || 'Bài hát không tên';
     if (islandExpArtist) islandExpArtist.textContent = track.artist || 'Không rõ nghệ sĩ';

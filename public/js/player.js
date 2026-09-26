@@ -147,10 +147,15 @@ class MusicPlayer {
         tBlob = new Blob([tBlob], { type: 'image/jpeg' });
       }
       this.currentCoverUrl = URL.createObjectURL(tBlob);
-    } else if (song.thumbnail) {
+    } else if (song.thumbnail && !song.thumbnail.includes('icon.svg')) {
       this.currentCoverUrl = song.thumbnail;
     } else {
-      this.currentCoverUrl = 'icons/icon.svg';
+      const cleanId = String(song.id || '').replace(/^yt_/, '').trim();
+      if (cleanId && cleanId.length === 11) {
+        this.currentCoverUrl = `https://i.ytimg.com/vi/${cleanId}/hqdefault.jpg`;
+      } else {
+        this.currentCoverUrl = 'icons/icon-192.png';
+      }
     }
 
     this.audio.src = this.currentAudioUrl;
@@ -172,6 +177,10 @@ class MusicPlayer {
   }
 
   async play() {
+    this._initAudioContext();
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      this.audioCtx.resume().catch(() => {});
+    }
     if (this.isYtPlaying && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
       try { this.ytPlayer.playVideo(); } catch (e) {}
       this.isPlaying = true;
@@ -403,11 +412,37 @@ class MusicPlayer {
 
   // --- Web Audio API & Visualizer Engine ---
   _initAudioContext() {
-    // Left native for pure speaker/bluetooth output without mobile WebAudio muting
+    if (this.audioCtx) return;
+    try {
+      const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtxClass) return;
+      this.audioCtx = new AudioCtxClass();
+      this.analyser = this.audioCtx.createAnalyser();
+      this.analyser.fftSize = 256;
+      this.analyser.smoothingTimeConstant = 0.55; // Quick responsive bounce to bass hits!
+
+      // Connect HTML5 audio element
+      this.audioSource = this.audioCtx.createMediaElementSource(this.audio);
+
+      // Bass boost filter
+      this.bassFilter = this.audioCtx.createBiquadFilter();
+      this.bassFilter.type = 'lowshelf';
+      this.bassFilter.frequency.value = 220;
+      this.bassFilter.gain.value = this.isBassBoosted ? 10 : 0;
+
+      this.audioSource.connect(this.bassFilter);
+      this.bassFilter.connect(this.analyser);
+      this.analyser.connect(this.audioCtx.destination);
+    } catch (e) {
+      console.warn('AudioContext init note:', e);
+    }
   }
 
   toggleBassBoost() {
     this.isBassBoosted = !this.isBassBoosted;
+    if (this.bassFilter && this.audioCtx) {
+      this.bassFilter.gain.setTargetAtTime(this.isBassBoosted ? 10 : 0, this.audioCtx.currentTime, 0.05);
+    }
     return this.isBassBoosted;
   }
 
@@ -457,20 +492,39 @@ class MusicPlayer {
       if (this.analyser && this.audioCtx && this.audioCtx.state === 'running') {
         const fullFreq = new Uint8Array(this.analyser.frequencyBinCount);
         this.analyser.getByteFrequencyData(fullFreq);
+
+        let bassSum = 0;
+        for (let b = 0; b < 5; b++) bassSum += fullFreq[b];
+        const bassAvg = bassSum / 5;
+
         for (let i = 0; i < numBars; i++) {
-          freqArray[i] = fullFreq[i] || 0;
-          if (freqArray[i] > 10) hasRealAudio = true;
+          const binIndex = Math.min(fullFreq.length - 1, Math.floor(Math.pow(i / numBars, 1.6) * 48));
+          let val = fullFreq[binIndex] || 0;
+
+          if (i < 10) {
+            val = Math.max(val, fullFreq[i] || 0);
+            val = Math.min(255, val * 1.35 + (bassAvg > 110 ? 30 : 0));
+          } else if (i < 20) {
+            val = Math.min(255, val * 1.15);
+          }
+          freqArray[i] = val;
+          if (val > 15) hasRealAudio = true;
         }
       }
 
-      // If playing without direct analyser access (e.g. CORS), generate rich responsive rhythm
+      // If stream/CORS prevents direct buffer read, generate authentic rhythmic 8-bit bass beats
       if (!hasRealAudio && this.isPlaying) {
-        const time = performance.now() * 0.004;
+        const time = performance.now() * 0.0055;
+        const kickWave = Math.pow(Math.max(0, Math.sin(time * 3.8)), 6);
+        const subKick = Math.pow(Math.max(0, Math.sin(time * 1.9 + 0.3)), 4);
+        const bassImpact = Math.max(kickWave * 240, subKick * 170);
+
         for (let i = 0; i < numBars; i++) {
-          const bass = Math.sin(time * 3) * 60 + 120;
-          const mid = Math.cos(time * 2 + i * 0.35) * 50 + 80;
-          const treble = Math.sin(time * 4 - i * 0.5) * 40 + 60;
-          const val = Math.max(10, Math.min(250, (bass * (1 - i / numBars) + mid * 0.6 + treble * 0.4)));
+          const bassDecay = Math.max(0, 1 - (i / (numBars * 0.45)));
+          const bassPart = bassImpact * bassDecay;
+          const midPart = (Math.sin(time * 5 + i * 0.35) * 35 + 45) * Math.sin((i / numBars) * Math.PI);
+          const treblePart = (Math.cos(time * 7 - i * 0.45) * 20 + 25) * (i / numBars);
+          const val = Math.max(12, Math.min(255, bassPart + midPart + treblePart));
           freqArray[i] = Math.floor(val);
         }
       } else if (!this.isPlaying) {
@@ -564,6 +618,15 @@ class MusicPlayer {
   }
 
   _setupMediaSession(song) {
+    if (window.AndroidBridge && typeof window.AndroidBridge.updateMedia === 'function') {
+      window.AndroidBridge.updateMedia(
+        song.title || 'Boxmusic',
+        song.artist || 'Không rõ nghệ sĩ',
+        song.coverUrl || '',
+        this.isPlaying
+      );
+    }
+
     if (!('mediaSession' in navigator)) return;
 
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -589,6 +652,15 @@ class MusicPlayer {
   _updateMediaSessionState(state) {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = state;
+    }
+    if (window.AndroidBridge && typeof window.AndroidBridge.updateMedia === 'function') {
+      const cur = this.getCurrentSong() || {};
+      window.AndroidBridge.updateMedia(
+        cur.title || 'Boxmusic',
+        cur.artist || 'Không rõ nghệ sĩ',
+        cur.coverUrl || '',
+        state === 'playing'
+      );
     }
   }
 

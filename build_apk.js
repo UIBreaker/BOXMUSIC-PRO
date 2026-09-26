@@ -84,14 +84,17 @@ async function build() {
   const manifestContent = `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.boxmusic.player"
-    android:versionCode="6"
-    android:versionName="1.0.5">
+    android:versionCode="7"
+    android:versionName="1.0.6">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <application
         android:label="@string/app_name"
@@ -104,6 +107,7 @@ async function build() {
         <activity
             android:name="com.boxmusic.player.MainActivity"
             android:label="@string/app_name"
+            android:launchMode="singleTop"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout"
             android:windowSoftInputMode="adjustResize"
             android:exported="true">
@@ -128,23 +132,47 @@ async function build() {
   const mainActivityContent = `package com.boxmusic.player;
 
 import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.media.MediaMetadata;
+import android.media.session.MediaSession;
+import android.media.session.PlaybackState;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class MainActivity extends Activity {
     private WebView webView;
-    private static final String SERVER_URL = "http://192.168.1.12:3000";
+    private MediaSession mediaSession;
+    private NotificationManager notificationManager;
+    private static final String CHANNEL_ID = "boxmusic_live_channel";
+    private static final int NOTIF_ID = 1088;
     private static final String ASSET_URL = "file:///android_asset/index.html";
+
+    private String currentTitle = "Boxmusic";
+    private String currentArtist = "San sang phat nhac";
+    private boolean currentIsPlaying = false;
+    private Bitmap currentCover = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -152,7 +180,6 @@ public class MainActivity extends Activity {
 
         requestWindowFeature(Window.FEATURE_NO_TITLE);
 
-        // Edge-to-edge support: draw behind camera cutout/notch on modern displays
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             getWindow().getAttributes().layoutInDisplayCutoutMode =
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
@@ -166,6 +193,15 @@ public class MainActivity extends Activity {
 
         applyFullScreen();
 
+        initMediaSession();
+
+        // Android 13+ Notification Permission Request for HyperOS / Dynamic Island
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 101);
+            }
+        }
+
         webView = new WebView(this);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -177,6 +213,8 @@ public class MainActivity extends Activity {
         settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+
+        webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
 
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
@@ -197,6 +235,197 @@ public class MainActivity extends Activity {
 
         setContentView(webView);
         webView.loadUrl(ASSET_URL);
+    }
+
+    private void initMediaSession() {
+        try {
+            notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && notificationManager != null) {
+                NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "Boxmusic Live Island",
+                    NotificationManager.IMPORTANCE_LOW
+                );
+                channel.setDescription("Dieu khien nhac tren HyperOS Dynamic Island");
+                channel.setShowBadge(false);
+                channel.setSound(null, null);
+                notificationManager.createNotificationChannel(channel);
+            }
+
+            mediaSession = new MediaSession(this, "BoxmusicSession");
+            mediaSession.setFlags(MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS | MediaSession.FLAG_HANDLES_MEDIA_BUTTONS);
+            mediaSession.setCallback(new MediaSession.Callback() {
+                @Override
+                public void onPlay() {
+                    runOnUiThread(() -> {
+                        if (webView != null) webView.evaluateJavascript("if (window.musicPlayer) window.musicPlayer.play();", null);
+                    });
+                }
+
+                @Override
+                public void onPause() {
+                    runOnUiThread(() -> {
+                        if (webView != null) webView.evaluateJavascript("if (window.musicPlayer) window.musicPlayer.pause();", null);
+                    });
+                }
+
+                @Override
+                public void onSkipToNext() {
+                    runOnUiThread(() -> {
+                        if (webView != null) webView.evaluateJavascript("if (window.musicPlayer) window.musicPlayer.next();", null);
+                    });
+                }
+
+                @Override
+                public void onSkipToPrevious() {
+                    runOnUiThread(() -> {
+                        if (webView != null) webView.evaluateJavascript("if (window.musicPlayer) window.musicPlayer.prev();", null);
+                    });
+                }
+
+                @Override
+                public void onStop() {
+                    runOnUiThread(() -> {
+                        if (webView != null) webView.evaluateJavascript("if (window.musicPlayer) window.musicPlayer.pause();", null);
+                    });
+                }
+            });
+
+            Intent intent = new Intent(this, MainActivity.class);
+            PendingIntent pi = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            mediaSession.setSessionActivity(pi);
+            mediaSession.setActive(true);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public class AndroidBridge {
+        @JavascriptInterface
+        public void updateMedia(final String title, final String artist, final String coverUrl, final boolean isPlaying) {
+            runOnUiThread(() -> {
+                currentTitle = (title != null && !title.isEmpty()) ? title : "Boxmusic";
+                currentArtist = (artist != null && !artist.isEmpty()) ? artist : "Dang phat";
+                currentIsPlaying = isPlaying;
+
+                updateNotificationAndSession(coverUrl);
+            });
+        }
+    }
+
+    private void updateNotificationAndSession(final String coverUrl) {
+        if (mediaSession == null) return;
+
+        if (coverUrl != null && (coverUrl.startsWith("http://") || coverUrl.startsWith("https://"))) {
+            new Thread(() -> {
+                try {
+                    URL url = new URL(coverUrl);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setDoInput(true);
+                    conn.setConnectTimeout(3000);
+                    conn.connect();
+                    InputStream input = conn.getInputStream();
+                    Bitmap bmp = BitmapFactory.decodeStream(input);
+                    if (bmp != null) {
+                        currentCover = bmp;
+                    }
+                } catch (Exception ignored) {}
+                runOnUiThread(() -> postMediaNotification());
+            }).start();
+        } else {
+            postMediaNotification();
+        }
+    }
+
+    private void postMediaNotification() {
+        if (mediaSession == null || notificationManager == null) return;
+
+        try {
+            long actions = PlaybackState.ACTION_PLAY
+                         | PlaybackState.ACTION_PAUSE
+                         | PlaybackState.ACTION_SKIP_TO_NEXT
+                         | PlaybackState.ACTION_SKIP_TO_PREVIOUS
+                         | PlaybackState.ACTION_STOP;
+
+            PlaybackState.Builder stateBuilder = new PlaybackState.Builder()
+                .setActions(actions)
+                .setState(currentIsPlaying ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1.0f);
+            mediaSession.setPlaybackState(stateBuilder.build());
+
+            MediaMetadata.Builder metaBuilder = new MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, currentTitle)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, currentArtist)
+                .putString(MediaMetadata.METADATA_KEY_ALBUM, "Boxmusic");
+
+            if (currentCover != null) {
+                metaBuilder.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, currentCover);
+            }
+            mediaSession.setMetadata(metaBuilder.build());
+
+            Intent openIntent = new Intent(this, MainActivity.class);
+            PendingIntent pOpen = PendingIntent.getActivity(this, 10, openIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Intent prevIntent = new Intent(this, MainActivity.class).setAction("com.boxmusic.ACTION_PREV");
+            PendingIntent pPrev = PendingIntent.getActivity(this, 11, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Intent playIntent = new Intent(this, MainActivity.class).setAction("com.boxmusic.ACTION_TOGGLE_PLAY");
+            PendingIntent pPlay = PendingIntent.getActivity(this, 12, playIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Intent nextIntent = new Intent(this, MainActivity.class).setAction("com.boxmusic.ACTION_NEXT");
+            PendingIntent pNext = PendingIntent.getActivity(this, 13, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Notification.Builder nb;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                nb = new Notification.Builder(this, CHANNEL_ID);
+            } else {
+                nb = new Notification.Builder(this);
+            }
+
+            nb.setSmallIcon(R.drawable.ic_launcher)
+              .setContentTitle(currentTitle)
+              .setContentText(currentArtist)
+              .setContentIntent(pOpen)
+              .setOngoing(currentIsPlaying)
+              .setVisibility(Notification.VISIBILITY_PUBLIC);
+
+            if (currentCover != null) {
+                nb.setLargeIcon(currentCover);
+            }
+
+            nb.addAction(new Notification.Action.Builder(android.R.drawable.ic_media_previous, "Prev", pPrev).build());
+            nb.addAction(new Notification.Action.Builder(currentIsPlaying ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play, currentIsPlaying ? "Pause" : "Play", pPlay).build());
+            nb.addAction(new Notification.Action.Builder(android.R.drawable.ic_media_next, "Next", pNext).build());
+
+            Notification.MediaStyle mediaStyle = new Notification.MediaStyle();
+            mediaStyle.setMediaSession(mediaSession.getSessionToken());
+            mediaStyle.setShowActionsInCompactView(0, 1, 2);
+            nb.setStyle(mediaStyle);
+
+            notificationManager.notify(NOTIF_ID, nb.build());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (intent != null && intent.getAction() != null) {
+            String action = intent.getAction();
+            if ("com.boxmusic.ACTION_TOGGLE_PLAY".equals(action)) {
+                runOnUiThread(() -> {
+                    if (webView != null) webView.evaluateJavascript("if (window.musicPlayer) window.musicPlayer.togglePlay();", null);
+                });
+            } else if ("com.boxmusic.ACTION_NEXT".equals(action)) {
+                runOnUiThread(() -> {
+                    if (webView != null) webView.evaluateJavascript("if (window.musicPlayer) window.musicPlayer.next();", null);
+                });
+            } else if ("com.boxmusic.ACTION_PREV".equals(action)) {
+                runOnUiThread(() -> {
+                    if (webView != null) webView.evaluateJavascript("if (window.musicPlayer) window.musicPlayer.prev();", null);
+                });
+            }
+        }
     }
 
     private void applyFullScreen() {
@@ -225,6 +454,17 @@ public class MainActivity extends Activity {
             super.onBackPressed();
         }
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (mediaSession != null) {
+            mediaSession.release();
+        }
+        if (notificationManager != null) {
+            notificationManager.cancel(NOTIF_ID);
+        }
+    }
 }
 `;
   fs.writeFileSync(path.join(SRC_DIR, 'MainActivity.java'), mainActivityContent);
@@ -251,7 +491,7 @@ public class MainActivity extends Activity {
   console.log('7. Compiling Java sources with javac (target 8)...');
   const javaFiles = getFilesRecursively(path.join(BUILD_DIR, 'src'), '.java');
   const javaArgs = javaFiles.map(f => `"${f}"`).join(' ');
-  execSync(`"${JAVAC}" -source 8 -target 8 -cp "${ANDROID_JAR}" -d "${classesDir}" ${javaArgs}`, { stdio: 'inherit' });
+  execSync(`"${JAVAC}" -encoding UTF-8 -source 8 -target 8 -cp "${ANDROID_JAR}" -d "${classesDir}" ${javaArgs}`, { stdio: 'inherit' });
 
   // 8. Convert to DEX with D8
   console.log('8. Converting classes to DEX with D8...');
@@ -260,7 +500,7 @@ public class MainActivity extends Activity {
   execSync(`"${JAVA}" -cp "${D8_JAR}" com.android.tools.r8.D8 --lib "${ANDROID_JAR}" --output "${dexDir}" ${classArgs}`, { stdio: 'inherit' });
 
   // Compile ApkPacker utility
-  execSync(`"${JAVAC}" -d "${BUILD_DIR}" "${path.join(BUILD_DIR, 'ApkPacker.java')}"`, { stdio: 'inherit' });
+  execSync(`"${JAVAC}" -encoding UTF-8 -d "${BUILD_DIR}" "${path.join(BUILD_DIR, 'ApkPacker.java')}"`, { stdio: 'inherit' });
 
   // 9. Pack base.apk + assets + classes.dex with ApkPacker (guarantees STORED uncompressed resources.arsc + POSIX forward slashes)
   console.log('9. Packaging APK with ApkPacker (uncompressed resources.arsc + POSIX paths)...');

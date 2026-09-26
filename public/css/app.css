@@ -1886,28 +1886,31 @@ body.retro-body {
 }
 
 .btn-retro-fav {
-  background: #fff;
-  border: 2.5px solid var(--retro-red);
-  color: #cbd5e1;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  color: #94a3b8;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.3rem;
   cursor: pointer;
-  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
-  transition: all 0.1s;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
 }
 
 .btn-retro-fav:active {
-  transform: translate(1px, 1px);
+  transform: scale(0.92);
 }
 
 .btn-retro-fav.active {
-  color: var(--retro-red);
-  background: #ffe4e6;
+  color: #ef4444;
+  border-color: #fca5a5;
+  background: #fef2f2;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
 }
 
 /* Scrubber / Slider */
@@ -1970,99 +1973,121 @@ body.retro-body {
 }
 
 .btn-ctrl-retro {
-  background: #fff;
-  border: 2.5px solid #0f172a;
+  background: #ffffff;
+  border: 2px solid #334155;
   width: 44px;
   height: 44px;
-  border-radius: 10px;
+  border-radius: 12px;
   color: #0f172a;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.25);
-  transition: transform 0.1s;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-ctrl-retro:active {
   transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.25);
+  box-shadow: 0px 0px 0px rgba(0, 0, 0, 0.2);
 }
 
 .btn-ctrl-retro.active {
-  background: #dbeafe;
+  background: #eff6ff;
   border-color: var(--retro-blue);
   color: var(--retro-blue);
+  box-shadow: 0 2px 8px rgba(29, 78, 216, 0.25);
 }
 
-/* The Green Main Play Button */
+/* Primary Play/Pause Button - Cohesive Retro Blue Circular Design */
 .btn-retro-play-main {
-  width: 68px;
-  height: 68px;
-  border-radius: 14px;
-  background: var(--retro-green);
-  border: 4px solid #14532d;
-  color: #fff;
-  font-size: 1.8rem;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border: 3px solid #0f172a;
+  color: #ffffff;
+  font-size: 1.45rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 
-    inset 2px 2px 0px var(--retro-green-glow),
-    inset -2px -2px 0px #365314,
-    0 6px 0px #14532d,
-    0 8px 12px rgba(0, 0, 0, 0.35);
-  transition: transform 0.1s;
+  box-shadow: 0 6px 16px rgba(29, 78, 216, 0.35), 2px 3px 0px #0f172a;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-retro-play-main:active {
-  transform: translateY(4px);
-  box-shadow: 0 2px 0px #14532d;
+  transform: translate(2px, 2px);
+  box-shadow: 0 2px 8px rgba(29, 78, 216, 0.25), 0px 1px 0px #0f172a;
 }
 
-/* Retro FX Deck Pills */
-.retro-fx-deck {
+/* Single-Row Smart Toolbar (Clean, Pro & Balanced) */
+.player-smart-bar {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  max-width: 360px;
+  margin: 8px auto 0;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 14px;
+  border: 2px solid #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  z-index: 5;
+}
+
+.smart-tool-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 6px;
-  z-index: 5;
-  flex-wrap: wrap;
-}
-
-.retro-fx-btn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-family: var(--font-pixel);
-  font-size: 0.65rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: #fff;
-  border: 2px solid #0f172a;
-  color: #0f172a;
+  gap: 2px;
+  padding: 6px 2px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  color: #475569;
   cursor: pointer;
-  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
-  transition: all 0.1s;
+  transition: all 0.15s ease;
 }
 
-.retro-fx-btn:active {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.2);
+.smart-tool-btn:active {
+  transform: scale(0.94);
 }
 
-.retro-fx-btn.active {
-  background: var(--retro-yellow);
+.smart-tool-btn .tool-icon {
+  font-size: 1.05rem;
+  line-height: 1;
 }
 
-.retro-fx-btn.danger {
-  color: var(--retro-red);
-  border-color: var(--retro-red);
+.smart-tool-btn .tool-label {
+  font-family: var(--font-pixel);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.smart-tool-btn.active {
+  background: #eff6ff;
+  border-color: var(--retro-blue);
+  color: var(--retro-blue);
+  box-shadow: 0 2px 6px rgba(29, 78, 216, 0.15);
+}
+
+.smart-tool-btn.danger {
+  color: #64748b;
+}
+
+.smart-tool-btn.danger:active {
+  color: #ef4444;
+  border-color: #fca5a5;
+  background: #fef2f2;
 }
 
 /* Toast Container - Positioned at bottom so it NEVER blocks search input or headers */
