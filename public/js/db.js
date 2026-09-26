@@ -1,6 +1,5 @@
-// Boxmusic IndexedDB Database Layer
 const DB_NAME = 'BoxmusicDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'songs';
 
 class MusicDB {
@@ -28,6 +27,11 @@ class MusicDB {
           store.createIndex('createdAt', 'createdAt', { unique: false });
           store.createIndex('favorite', 'favorite', { unique: false });
           store.createIndex('title', 'title', { unique: false });
+        }
+        if (!db.objectStoreNames.contains('playlists')) {
+          const pStore = db.createObjectStore('playlists', { keyPath: 'id' });
+          pStore.createIndex('createdAt', 'createdAt', { unique: false });
+          pStore.createIndex('name', 'name', { unique: false });
         }
       };
 
@@ -151,6 +155,110 @@ class MusicDB {
       totalMB: (totalBytes / (1024 * 1024)).toFixed(1),
       favoritesCount
     };
+  }
+
+  // --- Playlist Operations (Hoàn Toàn Offline) ---
+  async createPlaylist(name) {
+    if (!name || !name.trim()) throw new Error('Tên playlist không được để trống');
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('playlists', 'readwrite');
+      const store = tx.objectStore('playlists');
+      const playlist = {
+        id: 'pl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        name: name.trim(),
+        songIds: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      const req = store.add(playlist);
+      req.onsuccess = () => resolve(playlist);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async getAllPlaylists() {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('playlists', 'readonly');
+      const store = tx.objectStore('playlists');
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const list = req.result || [];
+        list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        resolve(list);
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async getPlaylist(id) {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('playlists', 'readonly');
+      const store = tx.objectStore('playlists');
+      const req = store.get(id);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async addSongToPlaylist(playlistId, songId) {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('playlists', 'readwrite');
+      const store = tx.objectStore('playlists');
+      const getReq = store.get(playlistId);
+      getReq.onsuccess = () => {
+        const pl = getReq.result;
+        if (!pl) return reject(new Error('Không tìm thấy danh sách phát'));
+        if (!pl.songIds) pl.songIds = [];
+        if (!pl.songIds.includes(songId)) {
+          pl.songIds.push(songId);
+          pl.updatedAt = Date.now();
+          const putReq = store.put(pl);
+          putReq.onsuccess = () => resolve(pl);
+          putReq.onerror = () => reject(putReq.error);
+        } else {
+          resolve(pl);
+        }
+      };
+      getReq.onerror = () => reject(getReq.error);
+    });
+  }
+
+  async removeSongFromPlaylist(playlistId, songId) {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('playlists', 'readwrite');
+      const store = tx.objectStore('playlists');
+      const getReq = store.get(playlistId);
+      getReq.onsuccess = () => {
+        const pl = getReq.result;
+        if (!pl) return reject(new Error('Không tìm thấy danh sách phát'));
+        if (pl.songIds) {
+          pl.songIds = pl.songIds.filter(id => id !== songId);
+          pl.updatedAt = Date.now();
+          const putReq = store.put(pl);
+          putReq.onsuccess = () => resolve(pl);
+          putReq.onerror = () => reject(putReq.error);
+        } else {
+          resolve(pl);
+        }
+      };
+      getReq.onerror = () => reject(getReq.error);
+    });
+  }
+
+  async deletePlaylist(playlistId) {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('playlists', 'readwrite');
+      const store = tx.objectStore('playlists');
+      const req = store.delete(playlistId);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => reject(req.error);
+    });
   }
 }
 

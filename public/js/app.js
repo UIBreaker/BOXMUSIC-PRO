@@ -2,23 +2,68 @@
 document.addEventListener('DOMContentLoaded', () => {
   // Service Worker Registration (only when supported and under http/https)
   if ('serviceWorker' in navigator && window.location && window.location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('sw.js?v=1.0.3').then((reg) => {
+    navigator.serviceWorker.register('sw.js?v=1.0.4').then((reg) => {
       reg.update();
     }).catch((err) => {
       console.warn('Service Worker registration skipped:', err);
     });
   }
 
-  // State & API base with custom override support
+  // State & API base with custom override + LAN auto-discovery
   let customApiBase = (typeof localStorage !== 'undefined') ? localStorage.getItem('boxmusic_custom_api_base') : null;
+  let autoDiscoveredApi = null;
+
   function getApiBase() {
     if (customApiBase) return customApiBase.replace(/\/+$/, '');
+    if (autoDiscoveredApi) return autoDiscoveredApi.replace(/\/+$/, '');
     if (typeof window !== 'undefined' && window.location && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
       return '';
     }
-    return 'http://192.168.1.15:3000';
+    return 'http://192.168.1.12:3000';
   }
   window.getApiBase = getApiBase;
+
+  async function pingServer(baseUrl, timeoutMs = 1800) {
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), timeoutMs);
+      const url = (baseUrl ? baseUrl.replace(/\/+$/, '') : '') + '/api/ping';
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (res.ok) {
+        const data = await res.json();
+        return data.ok === true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  async function autoScanServer() {
+    const candidates = [
+      'http://192.168.1.12:3000',
+      'http://192.168.1.15:3000',
+      'http://192.168.1.10:3000',
+      'http://192.168.1.11:3000',
+      'http://192.168.1.13:3000',
+      'http://192.168.1.14:3000',
+      'http://192.168.1.16:3000',
+      'http://192.168.1.17:3000',
+      'http://192.168.1.18:3000',
+      'http://192.168.1.19:3000',
+      'http://192.168.1.20:3000',
+      'http://localhost:3000'
+    ];
+    for (const ip of candidates) {
+      const ok = await pingServer(ip, 700);
+      if (ok) {
+        autoDiscoveredApi = ip;
+        customApiBase = ip;
+        try { localStorage.setItem('boxmusic_custom_api_base', ip); } catch (e) {}
+        return ip;
+      }
+    }
+    return null;
+  }
 
   let currentFilter = 'all';
   let librarySongs = [];
@@ -27,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // DOM Elements
   const libraryView = document.getElementById('library-view');
+  const playlistView = document.getElementById('playlist-view');
   const searchView = document.getElementById('search-view');
   const navItems = document.querySelectorAll('.nav-item');
   const networkBadge = document.getElementById('network-badge');
@@ -39,6 +85,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnImportFile = document.getElementById('btn-import-file');
   const localFileInput = document.getElementById('local-file-input');
   const filterPills = document.querySelectorAll('.filter-pill');
+
+  // Playlist Elements
+  const playlistCardsContainer = document.getElementById('playlist-cards-container');
+  const playlistEmpty = document.getElementById('playlist-empty');
+  const playlistStats = document.getElementById('playlist-stats');
+  const btnCreatePlaylist = document.getElementById('btn-create-playlist');
 
   // Search Elements
   const searchInput = document.getElementById('search-input');
@@ -516,6 +568,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (tabId === 'library-view') {
       loadLibrary();
+    } else if (tabId === 'playlist-view') {
+      loadPlaylists();
     }
   }
 
@@ -586,19 +640,27 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // 3. Gesture on Main Screens: Swipe Left / Right to switch between Library and Search
+    // 3. Gesture on Main Screens: Swipe Left / Right across 3 tabs
     if (isHorizontalSwipe) {
       const activeTabBtn = document.querySelector('.bottom-nav .nav-item.active');
       const activeTabId = activeTabBtn ? activeTabBtn.getAttribute('data-tab') : 'library-view';
 
-      if (diffX < 0 && activeTabId === 'library-view') {
-        // Swipe Left: Library -> Search
-        switchTab('search-view');
-        showToast('🔍 LƯỚT SANG TÌM KIẾM');
-      } else if (diffX > 0 && activeTabId === 'search-view') {
-        // Swipe Right: Search -> Library
-        switchTab('library-view');
-        showToast('📁 LƯỚT SANG THƯ VIỆN');
+      if (diffX < 0) {
+        if (activeTabId === 'library-view') {
+          switchTab('playlist-view');
+          showToast('📑 LƯỚT SANG PLAYLIST');
+        } else if (activeTabId === 'playlist-view') {
+          switchTab('search-view');
+          showToast('🔍 LƯỚT SANG TÌM KIẾM');
+        }
+      } else if (diffX > 0) {
+        if (activeTabId === 'search-view') {
+          switchTab('playlist-view');
+          showToast('📑 LƯỚT SANG PLAYLIST');
+        } else if (activeTabId === 'playlist-view') {
+          switchTab('library-view');
+          showToast('📁 LƯỚT SANG THƯ VIỆN');
+        }
       }
     }
   }, { passive: true });
@@ -812,6 +874,440 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // --- Settings Modal & PC Server IP Configuration ---
+  const modalSettings = document.getElementById('modal-settings');
+  const btnOpenSettings = document.getElementById('btn-open-settings');
+  const btnCloseSettings = document.getElementById('btn-close-settings');
+  const settingServerIp = document.getElementById('setting-server-ip');
+  const btnSaveServerIp = document.getElementById('btn-save-server-ip');
+  const btnPingServer = document.getElementById('btn-ping-server');
+  const btnScanServer = document.getElementById('btn-scan-server');
+  const serverPingResult = document.getElementById('server-ping-result');
+
+  if (btnOpenSettings) {
+    btnOpenSettings.addEventListener('click', async () => {
+      if (settingServerIp) settingServerIp.value = getApiBase();
+      if (serverPingResult) {
+        serverPingResult.className = 'server-ping-status';
+        serverPingResult.textContent = '';
+      }
+      modalSettings.classList.remove('hidden');
+      const stats = await window.musicDB.getStats();
+      updateDeviceStorageInfo(stats.count, stats.totalBytes || 0);
+    });
+  }
+  if (btnCloseSettings) {
+    btnCloseSettings.addEventListener('click', () => {
+      modalSettings.classList.add('hidden');
+    });
+  }
+
+  if (btnSaveServerIp) {
+    btnSaveServerIp.addEventListener('click', () => {
+      let val = (settingServerIp ? settingServerIp.value : '').trim();
+      if (!val) {
+        showToast('⚠️ Vui lòng nhập địa chỉ IP máy chủ');
+        return;
+      }
+      if (!val.startsWith('http://') && !val.startsWith('https://')) {
+        val = 'http://' + val;
+      }
+      val = val.replace(/\/+$/, '');
+      customApiBase = val;
+      try { localStorage.setItem('boxmusic_custom_api_base', val); } catch (e) {}
+      showToast(`✅ Đã lưu máy chủ: ${val}`);
+      if (btnPingServer) btnPingServer.click();
+    });
+  }
+
+  if (btnPingServer) {
+    btnPingServer.addEventListener('click', async () => {
+      const ip = (settingServerIp ? settingServerIp.value.trim() : '') || getApiBase();
+      serverPingResult.className = 'server-ping-status loading';
+      serverPingResult.textContent = '⏳ Đang kiểm tra kết nối tới ' + ip + '...';
+      const ok = await pingServer(ip, 2500);
+      if (ok) {
+        serverPingResult.className = 'server-ping-status success';
+        serverPingResult.textContent = '✓ Kết nối thành công! Máy chủ đang chạy.';
+        updateNetworkStatus(true);
+      } else {
+        serverPingResult.className = 'server-ping-status error';
+        serverPingResult.textContent = '✕ Không thể kết nối. Hãy kiểm tra lại IP hoặc chắc chắn PC đang chạy "node server.js".';
+        updateNetworkStatus(false);
+      }
+    });
+  }
+
+  if (btnScanServer) {
+    btnScanServer.addEventListener('click', async () => {
+      serverPingResult.className = 'server-ping-status loading';
+      serverPingResult.textContent = '🔍 Đang tự động dò tìm máy chủ Boxmusic trên mạng LAN...';
+      const found = await autoScanServer();
+      if (found) {
+        if (settingServerIp) settingServerIp.value = found;
+        serverPingResult.className = 'server-ping-status success';
+        serverPingResult.textContent = `✓ Đã tìm thấy máy chủ tại: ${found}!`;
+        updateNetworkStatus(true);
+        showToast(`🎉 Tìm thấy máy chủ: ${found}`);
+      } else {
+        serverPingResult.className = 'server-ping-status error';
+        serverPingResult.textContent = '✕ Không tìm thấy máy chủ. Hãy bật "node server.js" trên máy tính!';
+      }
+    });
+  }
+
+  // Network badge click: quick ping check
+  if (networkBadge) {
+    networkBadge.addEventListener('click', async () => {
+      showToast('🔍 Đang kiểm tra kết nối máy chủ PC...');
+      const ok = await pingServer(getApiBase(), 2000);
+      if (ok) {
+        updateNetworkStatus(true);
+        showToast('✅ Máy chủ PC đang hoạt động tốt!');
+      } else {
+        updateNetworkStatus(false);
+        showToast('⚠️ Không kết nối được PC. Nhấn ⚙️ CÀI ĐẶT để kiểm tra IP!');
+      }
+    });
+  }
+
+  // --- Custom Playlist Management (Hoàn Toàn Offline 100%) ---
+  let userPlaylists = [];
+  let currentSelectedSongForPlaylist = null;
+
+  async function loadPlaylists() {
+    try {
+      userPlaylists = await window.musicDB.getAllPlaylists();
+      if (playlistStats) {
+        playlistStats.textContent = `${userPlaylists.length} PLAYLIST`;
+      }
+      renderPlaylists(userPlaylists);
+    } catch (e) {
+      console.error('Failed to load playlists:', e);
+    }
+  }
+
+  function renderPlaylists(playlists) {
+    if (!playlistCardsContainer) return;
+    playlistCardsContainer.innerHTML = '';
+
+    if (!playlists || playlists.length === 0) {
+      if (playlistEmpty) playlistEmpty.style.display = 'block';
+      return;
+    }
+    if (playlistEmpty) playlistEmpty.style.display = 'none';
+
+    playlists.forEach((pl) => {
+      const card = document.createElement('div');
+      card.className = 'playlist-card';
+      const count = (pl.songIds && pl.songIds.length) || 0;
+
+      card.innerHTML = `
+        <div class="playlist-card-left">
+          <div class="playlist-card-icon">📑</div>
+          <div class="playlist-card-info">
+            <div class="playlist-card-title">${escapeHtml(pl.name)}</div>
+            <div class="playlist-card-count">${count} bài hát</div>
+          </div>
+        </div>
+        <div class="playlist-card-actions">
+          <button class="btn-pl-play" type="button" title="Phát playlist">▶ PHÁT</button>
+          <button class="retro-fx-btn danger btn-pl-delete" type="button" title="Xóa playlist">✕</button>
+        </div>
+      `;
+
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.playlist-card-actions')) return;
+        openPlaylistDetailModal(pl.id);
+      });
+
+      const playBtn = card.querySelector('.btn-pl-play');
+      if (playBtn) {
+        playBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          playPlaylistById(pl.id);
+        });
+      }
+
+      const delBtn = card.querySelector('.btn-pl-delete');
+      if (delBtn) {
+        delBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (confirm(`Bạn có chắc muốn xóa playlist "${pl.name}"? (Bài hát trong thư viện vẫn được giữ nguyên)`)) {
+            await window.musicDB.deletePlaylist(pl.id);
+            showToast(`🗑️ Đã xóa playlist: ${pl.name}`);
+            loadPlaylists();
+          }
+        });
+      }
+
+      playlistCardsContainer.appendChild(card);
+    });
+  }
+
+  async function playPlaylistById(playlistId) {
+    const pl = await window.musicDB.getPlaylist(playlistId);
+    if (!pl || !pl.songIds || pl.songIds.length === 0) {
+      showToast('ℹ️ Playlist này chưa có bài hát nào!');
+      return;
+    }
+
+    const allSongs = await window.musicDB.getAllSongs();
+    const songMap = new Map();
+    allSongs.forEach((s) => songMap.set(s.id, s));
+
+    const queue = [];
+    pl.songIds.forEach((id) => {
+      if (songMap.has(id)) queue.push(songMap.get(id));
+    });
+
+    if (queue.length === 0) {
+      showToast('⚠️ Không tìm thấy bài hát trong thư viện!');
+      return;
+    }
+
+    if (window.musicPlayer) {
+      window.musicPlayer.setQueue(queue, 0, true);
+      showToast(`▶ Đang phát playlist: ${pl.name} (${queue.length} bài)`);
+    }
+  }
+
+  // Create Playlist Modal
+  const modalPlaylistCreate = document.getElementById('modal-playlist-create');
+  const inputPlaylistName = document.getElementById('input-playlist-name');
+  const btnConfirmCreatePl = document.getElementById('btn-confirm-create-pl');
+  const btnCancelCreatePl = document.getElementById('btn-cancel-create-pl');
+  const btnCloseCreatePl = document.getElementById('btn-close-create-pl');
+
+  function openPlaylistCreateModal() {
+    if (inputPlaylistName) inputPlaylistName.value = '';
+    if (modalPlaylistCreate) modalPlaylistCreate.classList.remove('hidden');
+    setTimeout(() => inputPlaylistName && inputPlaylistName.focus(), 150);
+  }
+
+  if (btnCreatePlaylist) {
+    btnCreatePlaylist.addEventListener('click', openPlaylistCreateModal);
+  }
+  if (btnCloseCreatePl) {
+    btnCloseCreatePl.addEventListener('click', () => modalPlaylistCreate && modalPlaylistCreate.classList.add('hidden'));
+  }
+  if (btnCancelCreatePl) {
+    btnCancelCreatePl.addEventListener('click', () => modalPlaylistCreate && modalPlaylistCreate.classList.add('hidden'));
+  }
+
+  if (btnConfirmCreatePl) {
+    btnConfirmCreatePl.addEventListener('click', async () => {
+      const name = inputPlaylistName ? inputPlaylistName.value.trim() : '';
+      if (!name) {
+        showToast('⚠️ Vui lòng nhập tên playlist');
+        return;
+      }
+      try {
+        const newPl = await window.musicDB.createPlaylist(name);
+        if (modalPlaylistCreate) modalPlaylistCreate.classList.add('hidden');
+        showToast(`✅ Đã tạo playlist: ${newPl.name}`);
+        await loadPlaylists();
+
+        if (currentSelectedSongForPlaylist) {
+          await window.musicDB.addSongToPlaylist(newPl.id, currentSelectedSongForPlaylist.id);
+          showToast(`✓ Đã thêm "${currentSelectedSongForPlaylist.title}" vào playlist "${newPl.name}"!`);
+          currentSelectedSongForPlaylist = null;
+          const modalAdd = document.getElementById('modal-add-to-playlist');
+          if (modalAdd) modalAdd.classList.add('hidden');
+        }
+      } catch (err) {
+        showToast(`✕ Lỗi: ${err.message}`);
+      }
+    });
+  }
+
+  // Add Song to Playlist Modal
+  const modalAddToPlaylist = document.getElementById('modal-add-to-playlist');
+  const addPlSongTitle = document.getElementById('add-pl-song-title');
+  const playlistSelectList = document.getElementById('playlist-select-list');
+  const btnQuickNewPl = document.getElementById('btn-quick-new-pl');
+  const btnCloseAddPl = document.getElementById('btn-close-add-pl');
+
+  async function openAddToPlaylistModal(song) {
+    currentSelectedSongForPlaylist = song;
+    if (addPlSongTitle) addPlSongTitle.textContent = song.title || 'Bài hát';
+    const playlists = await window.musicDB.getAllPlaylists();
+
+    if (playlistSelectList) {
+      playlistSelectList.innerHTML = '';
+      if (playlists.length === 0) {
+        playlistSelectList.innerHTML = '<div style="font-size:0.75rem; color:#64748b; padding:10px; text-align:center;">Chưa có playlist nào. Nhấn nút bên dưới để tạo ngay!</div>';
+      } else {
+        playlists.forEach((pl) => {
+          const item = document.createElement('div');
+          item.className = 'playlist-select-item';
+          const count = (pl.songIds && pl.songIds.length) || 0;
+          const alreadyIn = pl.songIds && pl.songIds.includes(song.id);
+          item.innerHTML = `
+            <span>📑 ${escapeHtml(pl.name)} (${count} bài)</span>
+            <span>${alreadyIn ? '✓ Đã có' : '➕ Thêm'}</span>
+          `;
+          item.addEventListener('click', async () => {
+            await window.musicDB.addSongToPlaylist(pl.id, song.id);
+            showToast(`✓ Đã thêm vào playlist "${pl.name}"!`);
+            if (modalAddToPlaylist) modalAddToPlaylist.classList.add('hidden');
+            currentSelectedSongForPlaylist = null;
+            loadPlaylists();
+          });
+          playlistSelectList.appendChild(item);
+        });
+      }
+    }
+
+    if (modalAddToPlaylist) modalAddToPlaylist.classList.remove('hidden');
+  }
+
+  if (btnQuickNewPl) {
+    btnQuickNewPl.addEventListener('click', () => {
+      if (modalAddToPlaylist) modalAddToPlaylist.classList.add('hidden');
+      openPlaylistCreateModal();
+    });
+  }
+  if (btnCloseAddPl) {
+    btnCloseAddPl.addEventListener('click', () => {
+      if (modalAddToPlaylist) modalAddToPlaylist.classList.add('hidden');
+      currentSelectedSongForPlaylist = null;
+    });
+  }
+
+  // Playlist Detail Modal
+  const modalPlaylistDetail = document.getElementById('modal-playlist-detail');
+  const detailPlName = document.getElementById('detail-pl-name');
+  const detailPlCount = document.getElementById('detail-pl-count');
+  const detailPlSongList = document.getElementById('detail-pl-song-list');
+  const detailPlEmpty = document.getElementById('detail-pl-empty');
+  const btnPlayWholePlaylist = document.getElementById('btn-play-whole-playlist');
+  const btnDeleteThisPlaylist = document.getElementById('btn-delete-this-playlist');
+  const btnCloseDetailPl = document.getElementById('btn-close-detail-pl');
+  let currentViewingPlaylistId = null;
+
+  async function openPlaylistDetailModal(playlistId) {
+    currentViewingPlaylistId = playlistId;
+    const pl = await window.musicDB.getPlaylist(playlistId);
+    if (!pl) return;
+
+    if (detailPlName) detailPlName.textContent = pl.name;
+    const count = (pl.songIds && pl.songIds.length) || 0;
+    if (detailPlCount) detailPlCount.textContent = `${count} BÀI HÁT`;
+
+    const allSongs = await window.musicDB.getAllSongs();
+    const songMap = new Map();
+    allSongs.forEach((s) => songMap.set(s.id, s));
+
+    if (detailPlSongList) {
+      detailPlSongList.innerHTML = '';
+      const plSongs = [];
+      (pl.songIds || []).forEach((id) => {
+        if (songMap.has(id)) plSongs.push(songMap.get(id));
+      });
+
+      if (plSongs.length === 0) {
+        if (detailPlEmpty) detailPlEmpty.style.display = 'block';
+      } else {
+        if (detailPlEmpty) detailPlEmpty.style.display = 'none';
+        plSongs.forEach((s, idx) => {
+          const row = document.createElement('div');
+          row.className = 'song-card';
+          row.innerHTML = `
+            <div class="song-info" style="cursor:pointer; flex:1; min-width:0;">
+              <div class="song-title">${escapeHtml(s.title)}</div>
+              <div class="song-meta">
+                <span>${s.artist || 'Không rõ'}</span> • <span>${s.duration || '--:--'}</span>
+              </div>
+            </div>
+            <div class="song-actions">
+              <button class="action-btn delete-btn" type="button" title="Xóa khỏi playlist">✕</button>
+            </div>
+          `;
+          row.querySelector('.song-info').addEventListener('click', () => {
+            if (window.musicPlayer) {
+              window.musicPlayer.setQueue(plSongs, idx, true);
+              showToast(`▶ Đang phát: ${s.title}`);
+            }
+          });
+          row.querySelector('.delete-btn').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await window.musicDB.removeSongFromPlaylist(pl.id, s.id);
+            showToast(`✕ Đã xóa khỏi playlist: ${s.title}`);
+            openPlaylistDetailModal(pl.id);
+            loadPlaylists();
+          });
+          detailPlSongList.appendChild(row);
+        });
+      }
+    }
+
+    if (modalPlaylistDetail) modalPlaylistDetail.classList.remove('hidden');
+  }
+
+  if (btnPlayWholePlaylist) {
+    btnPlayWholePlaylist.addEventListener('click', () => {
+      if (currentViewingPlaylistId) {
+        playPlaylistById(currentViewingPlaylistId);
+        if (modalPlaylistDetail) modalPlaylistDetail.classList.add('hidden');
+      }
+    });
+  }
+  if (btnDeleteThisPlaylist) {
+    btnDeleteThisPlaylist.addEventListener('click', async () => {
+      if (!currentViewingPlaylistId) return;
+      const pl = await window.musicDB.getPlaylist(currentViewingPlaylistId);
+      if (!pl) return;
+      if (confirm(`Bạn có chắc muốn xóa playlist "${pl.name}"?`)) {
+        await window.musicDB.deletePlaylist(currentViewingPlaylistId);
+        if (modalPlaylistDetail) modalPlaylistDetail.classList.add('hidden');
+        showToast(`🗑️ Đã xóa playlist: ${pl.name}`);
+        loadPlaylists();
+      }
+    });
+  }
+  if (btnCloseDetailPl) {
+    btnCloseDetailPl.addEventListener('click', () => {
+      if (modalPlaylistDetail) modalPlaylistDetail.classList.add('hidden');
+      currentViewingPlaylistId = null;
+    });
+  }
+
+  // Full player add to playlist button
+  const btnPlayerAddPlaylist = document.getElementById('btn-player-add-playlist');
+  if (btnPlayerAddPlaylist) {
+    btnPlayerAddPlaylist.addEventListener('click', () => {
+      const cur = (window.musicPlayer && window.musicPlayer.getCurrentSong) ? window.musicPlayer.getCurrentSong() : null;
+      if (cur) {
+        openAddToPlaylistModal(cur);
+      } else {
+        showToast('⚠️ Không có bài hát nào đang phát');
+      }
+    });
+  }
+
+  // Close download dock button
+  const dlDockClose = document.getElementById('dl-dock-close');
+  if (dlDockClose) {
+    dlDockClose.addEventListener('click', () => {
+      if (downloadDock) downloadDock.classList.add('hidden');
+    });
+  }
+
+  // Startup server connectivity check
+  pingServer(getApiBase(), 1500).then((ok) => {
+    if (ok) {
+      updateNetworkStatus(true);
+    } else {
+      autoScanServer().then((found) => {
+        if (found) {
+          updateNetworkStatus(true);
+          showToast(`🔗 Đã kết nối máy chủ: ${found}`);
+        }
+      });
+    }
+  });
+
   function renderLibraryList() {
     librarySongList.innerHTML = '';
 
@@ -860,6 +1356,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
         <div class="song-actions">
+          <button class="action-btn add-to-pl-btn" type="button" title="Thêm vào Playlist">📑</button>
           <button class="action-btn favorite ${song.favorite ? 'active' : ''}" type="button" aria-label="Favorite">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
@@ -872,6 +1369,15 @@ document.addEventListener('DOMContentLoaded', () => {
           </button>
         </div>
       `;
+
+      // Add to playlist button
+      const plBtn = card.querySelector('.add-to-pl-btn');
+      if (plBtn) {
+        plBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openAddToPlaylistModal(song);
+        });
+      }
 
       // Play song on card tap
       card.addEventListener('click', (e) => {
@@ -1337,7 +1843,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (cardProgressText) cardProgressText.textContent = '✕ Máy chủ PC tắt';
 
       if (navigator.onLine) {
-        showToast('ℹ️ Máy tính đang tắt máy chủ Boxmusic. Bạn vẫn nghe trực tuyến được! Hãy bật máy chủ trên PC để lưu bài hát về máy offline.');
+        showToast(`⚠️ Chưa kết nối được PC (${getApiBase()}). Chạm vào ⚙️ CÀI ĐẶT để kiểm tra IP máy tính!`);
       } else {
         showToast('⚠️ Thiết bị không có kết nối mạng internet!');
       }

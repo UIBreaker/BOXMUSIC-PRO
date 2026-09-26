@@ -84,8 +84,8 @@ async function build() {
   const manifestContent = `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.boxmusic.player"
-    android:versionCode="4"
-    android:versionName="1.0.3">
+    android:versionCode="5"
+    android:versionName="1.0.4">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
@@ -143,7 +143,7 @@ import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
     private WebView webView;
-    private static final String SERVER_URL = "http://192.168.1.15:3000";
+    private static final String SERVER_URL = "http://192.168.1.12:3000";
     private static final String ASSET_URL = "file:///android_asset/index.html";
 
     @Override

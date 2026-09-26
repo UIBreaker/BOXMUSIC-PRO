@@ -11,15 +11,15 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Boxmusic">
-  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
-  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 
   <!-- Retro Pixel Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/app.css?v=1.0.3">
+  <link rel="stylesheet" href="css/app.css?v=1.0.4">
 </head>
 <body class="retro-body">
   <div id="app">
@@ -197,11 +197,14 @@
         <div class="os-icon">💾</div>
         <div class="os-title-col">
           <span class="os-window-name">BOXMUSIC.EXE</span>
-          <span id="greeting-time" class="os-substatus">HỆ THỐNG OFFLINE V1.0.3</span>
+          <span id="greeting-time" class="os-substatus">HỆ THỐNG V1.0.4</span>
         </div>
       </div>
       <div class="header-actions-row">
-        <div id="network-badge" class="network-badge online">
+        <button id="btn-open-settings" class="btn-retro-header-settings" type="button" title="Cài đặt hệ thống & máy chủ">
+          <span>⚙️ CÀI ĐẶT</span>
+        </button>
+        <div id="network-badge" class="network-badge online" title="Chạm để kiểm tra máy chủ">
           <span class="dot"></span>
           <span id="network-status-text">ONLINE</span>
         </div>
@@ -213,31 +216,6 @@
       
       <!-- TAB 1: THƯ VIỆN OFFLINE -->
       <section id="library-view" class="view-panel active">
-        <!-- Device Storage & Vault Location Panel -->
-        <div class="device-vault-card" id="device-vault-card">
-          <div class="vault-top-row">
-            <span class="vault-badge" id="vault-device-badge">📱 THIẾT BỊ ANDROID</span>
-            <span class="vault-free-text" id="vault-free-space">TRỐNG: ĐANG TÍNH...</span>
-          </div>
-          <div class="vault-path-row" id="vault-path-row" title="Vị trí lưu trữ bài hát">
-            <span>📁</span>
-            <span id="vault-path-text">/storage/emulated/0/Boxmusic</span>
-          </div>
-          <div class="vault-progress-track">
-            <div class="vault-progress-fill" id="vault-progress-bar" style="width: 5%;"></div>
-          </div>
-          <!-- Vault Backup & Restore Buttons -->
-          <div class="vault-backup-row">
-            <button id="btn-export-vault" class="btn-vault-action" type="button" title="Xuất dữ liệu toàn bộ bài hát ra file để lưu giữ an toàn">
-              <span>💾 SAO LƯU NHẠC</span>
-            </button>
-            <button id="btn-import-vault" class="btn-vault-action" type="button" title="Khôi phục toàn bộ bài hát từ file đã sao lưu khi nâng cấp">
-              <span>📥 KHÔI PHỤC</span>
-            </button>
-            <input type="file" id="vault-file-input" accept=".json" style="display: none;">
-          </div>
-        </div>
-
         <!-- Retro Window Container for Library -->
         <div class="retro-window-box">
           <div class="retro-window-header-sm">
@@ -250,6 +228,7 @@
               <button class="filter-pill active" data-filter="all">TẤT CẢ</button>
               <button class="filter-pill" data-filter="favorite">♥ YÊU THÍCH</button>
               <button class="filter-pill" data-filter="youtube">YOUTUBE</button>
+              <button class="filter-pill" data-filter="local">TỪ MÁY</button>
             </div>
           </div>
         </div>
@@ -267,7 +246,34 @@
         </div>
       </section>
 
-      <!-- TAB 2: TÌM KIẾM THẾ GIỚI -->
+      <!-- TAB 2: DANH SÁCH PHÁT (PLAYLISTS OFFLINE) -->
+      <section id="playlist-view" class="view-panel">
+        <div class="retro-window-box">
+          <div class="retro-window-header-sm">
+            <span>📑 C:\MUSIC\PLAYLISTS</span>
+            <span id="playlist-stats" class="win-counter">0 PLAYLIST</span>
+          </div>
+          <div class="retro-window-inner">
+            <button id="btn-create-playlist" class="btn-retro-create-pl" type="button">
+              <span>➕ TẠO PLAYLIST MỚI</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Playlist Grid / Cards Container -->
+        <div id="playlist-cards-container" class="playlist-grid">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Empty state when no playlists -->
+        <div id="playlist-empty" class="empty-state retro-empty" style="display: none;">
+          <div class="empty-retro-art">📑</div>
+          <div class="empty-title">CHƯA CÓ PLAYLIST</div>
+          <div class="empty-desc">Nhấp <b>TẠO PLAYLIST MỚI</b> để gom nhóm các bài hát yêu thích theo chủ đề (Lofi, Chill, Gym...) hoàn toàn offline!</div>
+        </div>
+      </section>
+
+      <!-- TAB 3: TÌM KIẾM THẾ GIỚI -->
       <section id="search-view" class="view-panel">
         <div class="retro-window-box">
           <div class="retro-window-header-sm">
@@ -331,7 +337,10 @@
           <span class="dl-dock-icon">📥</span>
           <span id="dl-dock-title" class="dl-dock-title">Đang tải: Tên bài hát...</span>
         </div>
-        <span id="dl-dock-percent" class="dl-dock-percent">0%</span>
+        <div class="dl-dock-right-ctrls">
+          <span id="dl-dock-percent" class="dl-dock-percent">0%</span>
+          <button id="dl-dock-close" class="dl-dock-close-btn" type="button" title="Đóng thanh tải">✕</button>
+        </div>
       </div>
       <div class="dl-dock-bar">
         <div id="dl-dock-fill" class="dl-dock-fill" style="width: 0%;"></div>
@@ -380,6 +389,10 @@
       <button class="nav-item active" data-tab="library-view" type="button">
         <div class="nav-icon-wrap">📁</div>
         <span>THƯ VIỆN</span>
+      </button>
+      <button class="nav-item" data-tab="playlist-view" type="button">
+        <div class="nav-icon-wrap">📑</div>
+        <span>PLAYLIST</span>
       </button>
       <button class="nav-item" data-tab="search-view" type="button">
         <div class="nav-icon-wrap">🔍</div>
@@ -487,6 +500,10 @@
 
       <!-- Retro FX & Action Pills Bar -->
       <div class="player-fx-bar retro-fx-deck">
+        <button id="btn-player-add-playlist" class="retro-fx-btn" type="button" title="Thêm bài hát này vào Playlist">
+          <span class="fx-icon">📑</span>
+          <span>+ PLAYLIST</span>
+        </button>
         <button id="btn-fx-bass" class="retro-fx-btn" type="button">
           <span class="fx-icon">🔥</span>
           <span id="bass-mode-text">BASS: OFF</span>
@@ -584,6 +601,157 @@
       </div>
     </div>
 
+    <!-- RETRO MODAL: SETTINGS & VAULT STORAGE & SERVER IP -->
+    <div id="modal-settings" class="retro-modal-overlay hidden">
+      <div class="retro-modal-box settings-modal-box">
+        <div class="retro-title-bar modal-title-bar">
+          <div class="retro-title-text">
+            <span>⚙️</span> C:\SYSTEM\SETTINGS.EXE
+          </div>
+          <button id="btn-close-settings" class="win-btn-red" type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="retro-modal-body">
+
+          <!-- 1. Device Storage & Vault Location Panel -->
+          <div class="settings-card-section">
+            <div class="settings-sec-title">💾 BỘ NHỚ LƯU TRỮ OFFLINE</div>
+            <div class="device-vault-card" id="device-vault-card">
+              <div class="vault-top-row">
+                <span class="vault-badge" id="vault-device-badge">📱 THIẾT BỊ ANDROID</span>
+                <span class="vault-free-text" id="vault-free-space">TRỐNG: ĐANG TÍNH...</span>
+              </div>
+              <div class="vault-path-row" id="vault-path-row" title="Vị trí lưu trữ bài hát">
+                <span>📁</span>
+                <span id="vault-path-text">/storage/emulated/0/Boxmusic</span>
+              </div>
+              <div class="vault-progress-track">
+                <div class="vault-progress-fill" id="vault-progress-bar" style="width: 5%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Vault Backup & Restore Buttons -->
+          <div class="settings-card-section">
+            <div class="settings-sec-title">📦 SAO LƯU & KHÔI PHỤC (KHÔNG MẤT NHẠC)</div>
+            <div class="vault-backup-row">
+              <button id="btn-export-vault" class="btn-vault-action" type="button" title="Xuất dữ liệu toàn bộ bài hát ra file để lưu giữ an toàn">
+                <span>💾 SAO LƯU (.JSON)</span>
+              </button>
+              <button id="btn-import-vault" class="btn-vault-action" type="button" title="Khôi phục toàn bộ bài hát từ file đã sao lưu khi nâng cấp">
+                <span>📥 KHÔI PHỤC</span>
+              </button>
+              <input type="file" id="vault-file-input" accept=".json" style="display: none;">
+            </div>
+            <div class="settings-note-text">
+              Xuất tệp sao lưu lưu giữ toàn bộ bài hát khi nâng cấp ứng dụng hoặc đổi sang máy mới.
+            </div>
+          </div>
+
+          <!-- 3. PC Server IP & Auto Discovery -->
+          <div class="settings-card-section">
+            <div class="settings-sec-title">🖥️ MÁY CHỦ PC KẾT NỐI (LAN SERVER)</div>
+            <div class="server-input-row">
+              <input type="text" id="setting-server-ip" class="retro-input" placeholder="http://192.168.1.12:3000" autocomplete="off">
+              <button id="btn-save-server-ip" class="win-btn-primary" type="button">LƯU</button>
+            </div>
+            <div class="server-actions-row">
+              <button id="btn-ping-server" class="win-btn-gray-sm" type="button">⚡ KIỂM TRA</button>
+              <button id="btn-scan-server" class="win-btn-gray-sm" type="button">🔍 TỰ ĐỘNG DÒ IP</button>
+            </div>
+            <div id="server-ping-result" class="server-ping-status"></div>
+          </div>
+
+          <!-- 4. Version info -->
+          <div class="settings-card-section version-sec">
+            <div class="version-row">
+              <span><b>Phiên bản:</b> Boxmusic Pro v1.0.4 (Offline Engine)</span>
+              <span><b>Cơ chế:</b> IndexedDB Persistence + YouTube InnerTube</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- RETRO MODAL: CREATE PLAYLIST -->
+    <div id="modal-playlist-create" class="retro-modal-overlay hidden">
+      <div class="retro-modal-box sm">
+        <div class="retro-title-bar modal-title-bar">
+          <div class="retro-title-text">
+            <span>➕</span> TẠO DANH SÁCH PHÁT MỚI
+          </div>
+          <button id="btn-close-create-pl" class="win-btn-red" type="button">✕</button>
+        </div>
+        <div class="retro-modal-body">
+          <div style="font-family:var(--font-pixel); font-size:0.75rem; color:#1e3a8a; margin-bottom:8px;">
+            ĐẶT TÊN PLAYLIST:
+          </div>
+          <input type="text" id="input-playlist-name" class="retro-input" placeholder="Ví dụ: Nhạc Lofi, Gym, Chill..." maxlength="40" autocomplete="off">
+          <div class="modal-actions-row" style="margin-top:14px; gap:8px;">
+            <button id="btn-cancel-create-pl" class="win-btn-gray" type="button">HỦY</button>
+            <button id="btn-confirm-create-pl" class="win-btn-primary" type="button">TẠO NGAY ✓</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RETRO MODAL: ADD SONG TO PLAYLIST -->
+    <div id="modal-add-to-playlist" class="retro-modal-overlay hidden">
+      <div class="retro-modal-box sm">
+        <div class="retro-title-bar modal-title-bar">
+          <div class="retro-title-text">
+            <span>📑</span> THÊM VÀO PLAYLIST
+          </div>
+          <button id="btn-close-add-pl" class="win-btn-red" type="button">✕</button>
+        </div>
+        <div class="retro-modal-body">
+          <div class="add-pl-song-info">
+            <div style="font-size:0.7rem; color:#64748b;">BÀI HÁT:</div>
+            <div id="add-pl-song-title" class="add-pl-song-name">Tên bài hát</div>
+          </div>
+          <div style="font-family:var(--font-pixel); font-size:0.72rem; color:#1e3a8a; margin:10px 0 6px;">
+            CHỌN PLAYLIST ĐÍCH:
+          </div>
+          <div id="playlist-select-list" class="playlist-select-container">
+            <!-- Dynamically populated -->
+          </div>
+          <div class="modal-actions-row" style="margin-top:12px;">
+            <button id="btn-quick-new-pl" class="win-btn-gray" type="button">➕ TẠO PLAYLIST MỚI</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RETRO MODAL: PLAYLIST DETAIL / SONGS -->
+    <div id="modal-playlist-detail" class="retro-modal-overlay hidden">
+      <div class="retro-modal-box">
+        <div class="retro-title-bar modal-title-bar">
+          <div class="retro-title-text">
+            <span>📑</span> <span id="detail-pl-name">PLAYLIST</span>
+          </div>
+          <button id="btn-close-detail-pl" class="win-btn-red" type="button">✕</button>
+        </div>
+        <div class="retro-modal-body">
+          <div class="detail-pl-header-row">
+            <div>
+              <span id="detail-pl-count" class="badge-tag">0 BÀI</span>
+            </div>
+            <div class="detail-pl-actions">
+              <button id="btn-play-whole-playlist" class="win-btn-primary" type="button">▶ PHÁT TẤT CẢ</button>
+              <button id="btn-delete-this-playlist" class="retro-fx-btn danger" type="button" title="Xóa playlist này">🗑️</button>
+            </div>
+          </div>
+          <div id="detail-pl-song-list" class="song-list playlist-inner-list">
+            <!-- Dynamically populated -->
+          </div>
+          <div id="detail-pl-empty" class="empty-state retro-empty" style="display:none; padding:20px 10px;">
+            <div class="empty-title">CHƯA CÓ BÀI HÁT TRONG PLAYLIST</div>
+            <div class="empty-desc">Chạm vào nút <b>📑</b> ở mỗi bài hát trong Thư viện để thêm vào đây!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast container -->
     <div id="toast-container" class="toast-container"></div>
 
@@ -597,8 +765,8 @@
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <!-- Scripts -->
-  <script src="js/db.js?v=1.0.3"></script>
-  <script src="js/player.js?v=1.0.3"></script>
-  <script src="js/app.js?v=1.0.3"></script>
+  <script src="js/db.js?v=1.0.4"></script>
+  <script src="js/player.js?v=1.0.4"></script>
+  <script src="js/app.js?v=1.0.4"></script>
 </body>
 </html>

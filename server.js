@@ -35,6 +35,11 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
+// Health check / ping endpoint for LAN discovery
+app.get('/api/ping', (req, res) => {
+  res.json({ ok: true, version: '1.0.4', time: Date.now() });
+});
+
 // API: Search songs worldwide
 app.get('/api/search', async (req, res) => {
   const query = req.query.q;

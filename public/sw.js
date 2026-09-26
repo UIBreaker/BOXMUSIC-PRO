@@ -1,12 +1,12 @@
-const CACHE_NAME = 'boxmusic-cache-v103';
+const CACHE_NAME = 'boxmusic-cache-v104';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/css/app.css?v=1.0.3',
-  '/js/db.js?v=1.0.3',
-  '/js/player.js?v=1.0.3',
-  '/js/app.js?v=1.0.3',
+  '/css/app.css?v=1.0.4',
+  '/js/db.js?v=1.0.4',
+  '/js/player.js?v=1.0.4',
+  '/js/app.js?v=1.0.4',
   '/icons/icon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png'

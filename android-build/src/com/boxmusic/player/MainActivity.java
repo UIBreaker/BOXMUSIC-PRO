@@ -16,7 +16,7 @@ import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
     private WebView webView;
-    private static final String SERVER_URL = "http://192.168.1.15:3000";
+    private static final String SERVER_URL = "http://192.168.1.12:3000";
     private static final String ASSET_URL = "file:///android_asset/index.html";
 
     @Override
