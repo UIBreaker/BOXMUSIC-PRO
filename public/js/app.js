@@ -9,16 +9,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // State & API base with custom override + LAN auto-discovery
+  // State & API base with custom override + LAN auto-discovery + Cloudflare 4G/Remote tunnel
   let customApiBase = (typeof localStorage !== 'undefined') ? localStorage.getItem('boxmusic_custom_api_base') : null;
   let autoDiscoveredApi = null;
+  let remoteTunnelUrl = (typeof localStorage !== 'undefined') ? localStorage.getItem('boxmusic_remote_tunnel_url') : null;
+  let activeApiBase = null;
 
   function getApiBase() {
-    if (customApiBase) return customApiBase.replace(/\/+$/, '');
-    if (autoDiscoveredApi) return autoDiscoveredApi.replace(/\/+$/, '');
     if (typeof window !== 'undefined' && window.location && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
       return '';
     }
+    if (activeApiBase) return activeApiBase.replace(/\/+$/, '');
+    if (customApiBase) return customApiBase.replace(/\/+$/, '');
+    if (autoDiscoveredApi) return autoDiscoveredApi.replace(/\/+$/, '');
+    if (remoteTunnelUrl) return remoteTunnelUrl.replace(/\/+$/, '');
     return 'http://192.168.1.12:3000';
   }
   window.getApiBase = getApiBase;
@@ -27,7 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), timeoutMs);
-      const url = (baseUrl ? baseUrl.replace(/\/+$/, '') : '') + '/api/ping';
+      const cleanUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : '';
+      const url = cleanUrl + '/api/ping';
       const res = await fetch(url, { signal: ctrl.signal });
       clearTimeout(tid);
       if (res.ok) {
@@ -36,6 +41,29 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {}
     return false;
+  }
+
+  async function syncServerInfo(baseUrl) {
+    try {
+      const cleanUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : '';
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 2500);
+      const res = await fetch(cleanUrl + '/api/server-info', { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ok && data.publicUrl) {
+          remoteTunnelUrl = data.publicUrl;
+          try { localStorage.setItem('boxmusic_remote_tunnel_url', data.publicUrl); } catch (e) {}
+          const settingTunnel = document.getElementById('setting-remote-tunnel-url');
+          if (settingTunnel && !settingTunnel.value) {
+            settingTunnel.value = data.publicUrl;
+          }
+          return data;
+        }
+      }
+    } catch (e) {}
+    return null;
   }
 
   async function autoScanServer() {
@@ -58,7 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (ok) {
         autoDiscoveredApi = ip;
         customApiBase = ip;
+        activeApiBase = ip;
         try { localStorage.setItem('boxmusic_custom_api_base', ip); } catch (e) {}
+        syncServerInfo(ip);
         return ip;
       }
     }
@@ -511,24 +541,38 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Network Status ---
-  function updateNetworkStatus() {
-    const isOnline = navigator.onLine;
-    if (isOnline) {
-      networkBadge.className = 'network-badge online';
-      networkStatusText.textContent = 'Trực tuyến';
-      searchOfflineNotice.style.display = 'none';
-    } else {
-      networkBadge.className = 'network-badge offline';
-      networkStatusText.textContent = 'Ngoại tuyến';
-      if (searchResultsList.children.length === 0) {
-        searchOfflineNotice.style.display = 'block';
-        searchPlaceholder.style.display = 'none';
+  function updateNetworkStatus(serverOk) {
+    const isOnline = (typeof serverOk === 'boolean') ? serverOk : navigator.onLine;
+    if (networkBadge) {
+      networkBadge.className = `network-badge ${isOnline ? 'online' : 'offline'}`;
+      if (networkStatusText) {
+        if (!isOnline) {
+          networkStatusText.textContent = 'Ngoại tuyến';
+        } else if (activeApiBase && activeApiBase.includes('trycloudflare.com')) {
+          networkStatusText.textContent = '4G/Từ xa';
+        } else {
+          networkStatusText.textContent = 'Trực tuyến';
+        }
       }
+    }
+    if (searchOfflineNotice) {
+      searchOfflineNotice.style.display = isOnline ? 'none' : 'block';
+    }
+    if (isOnline && searchPlaceholder && searchResultsList && searchResultsList.children.length === 0) {
+      searchPlaceholder.style.display = 'block';
+    } else if (!isOnline && searchPlaceholder) {
+      searchPlaceholder.style.display = 'none';
     }
   }
 
-  window.addEventListener('online', updateNetworkStatus);
-  window.addEventListener('offline', updateNetworkStatus);
+  window.addEventListener('online', () => {
+    updateNetworkStatus(true);
+    showToast('🟢 Đã kết nối mạng trở lại!');
+  });
+  window.addEventListener('offline', () => {
+    updateNetworkStatus(false);
+    showToast('🟠 Thiết bị đang ngoại tuyến. Nhạc trong Thư viện vẫn phát bình thường 100%!');
+  });
   updateNetworkStatus();
 
   // --- Toast Notifications ---
@@ -891,11 +935,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSaveServerIp = document.getElementById('btn-save-server-ip');
   const btnPingServer = document.getElementById('btn-ping-server');
   const btnScanServer = document.getElementById('btn-scan-server');
+  const settingRemoteTunnelUrl = document.getElementById('setting-remote-tunnel-url');
+  const btnSaveRemoteTunnel = document.getElementById('btn-save-remote-tunnel');
+  const btnPingRemoteTunnel = document.getElementById('btn-ping-remote-tunnel');
+  const btnFetchRemoteTunnel = document.getElementById('btn-fetch-remote-tunnel');
   const serverPingResult = document.getElementById('server-ping-result');
 
   if (btnOpenSettings) {
     btnOpenSettings.addEventListener('click', async () => {
-      if (settingServerIp) settingServerIp.value = getApiBase();
+      if (settingServerIp) settingServerIp.value = customApiBase || autoDiscoveredApi || 'http://192.168.1.12:3000';
+      if (settingRemoteTunnelUrl) settingRemoteTunnelUrl.value = remoteTunnelUrl || '';
       if (serverPingResult) {
         serverPingResult.className = 'server-ping-status';
         serverPingResult.textContent = '';
@@ -923,8 +972,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       val = val.replace(/\/+$/, '');
       customApiBase = val;
+      activeApiBase = val;
       try { localStorage.setItem('boxmusic_custom_api_base', val); } catch (e) {}
-      showToast(`✅ Đã lưu máy chủ: ${val}`);
+      showToast(`✅ Đã lưu máy chủ LAN: ${val}`);
       if (btnPingServer) btnPingServer.click();
     });
   }
@@ -936,9 +986,11 @@ document.addEventListener('DOMContentLoaded', () => {
       serverPingResult.textContent = '⏳ Đang kiểm tra kết nối tới ' + ip + '...';
       const ok = await pingServer(ip, 2500);
       if (ok) {
+        activeApiBase = ip;
         serverPingResult.className = 'server-ping-status success';
-        serverPingResult.textContent = '✓ Kết nối thành công! Máy chủ đang chạy.';
+        serverPingResult.textContent = '✓ Kết nối thành công! Máy chủ LAN đang chạy.';
         updateNetworkStatus(true);
+        syncServerInfo(ip);
       } else {
         serverPingResult.className = 'server-ping-status error';
         serverPingResult.textContent = '✕ Không thể kết nối. Hãy kiểm tra lại IP hoặc chắc chắn PC đang chạy "node server.js".';
@@ -965,7 +1017,69 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Network badge click: quick ping check
+  if (btnSaveRemoteTunnel) {
+    btnSaveRemoteTunnel.addEventListener('click', () => {
+      let val = (settingRemoteTunnelUrl ? settingRemoteTunnelUrl.value : '').trim();
+      if (!val) {
+        showToast('⚠️ Vui lòng nhập link Cloudflare từ xa');
+        return;
+      }
+      if (!val.startsWith('http://') && !val.startsWith('https://')) {
+        val = 'https://' + val;
+      }
+      val = val.replace(/\/+$/, '');
+      remoteTunnelUrl = val;
+      activeApiBase = val;
+      try { localStorage.setItem('boxmusic_remote_tunnel_url', val); } catch (e) {}
+      showToast(`🌐 Đã lưu link Cloudflare từ xa: ${val}`);
+      if (btnPingRemoteTunnel) btnPingRemoteTunnel.click();
+    });
+  }
+
+  if (btnPingRemoteTunnel) {
+    btnPingRemoteTunnel.addEventListener('click', async () => {
+      const tunnel = (settingRemoteTunnelUrl ? settingRemoteTunnelUrl.value.trim() : '') || remoteTunnelUrl;
+      if (!tunnel) {
+        serverPingResult.className = 'server-ping-status error';
+        serverPingResult.textContent = '✕ Chưa có link Cloudflare. Hãy bấm "LẤY LINK TỰ ĐỘNG" hoặc nhập link!';
+        return;
+      }
+      serverPingResult.className = 'server-ping-status loading';
+      serverPingResult.textContent = '⏳ Đang kiểm tra kết nối 4G/Cloudflare tới ' + tunnel + '...';
+      const ok = await pingServer(tunnel, 4000);
+      if (ok) {
+        activeApiBase = tunnel;
+        serverPingResult.className = 'server-ping-status success';
+        serverPingResult.textContent = '✓ Kết nối 4G/Cloudflare thành công! Tải nhạc từ mọi nơi mượt mà.';
+        updateNetworkStatus(true);
+        showToast('🎉 Kết nối từ xa Cloudflare thành công!');
+      } else {
+        serverPingResult.className = 'server-ping-status error';
+        serverPingResult.textContent = '✕ Không thể kết nối Cloudflare. Hãy kiểm tra xem "node server.js" trên máy tính có đang mở không.';
+        updateNetworkStatus(false);
+      }
+    });
+  }
+
+  if (btnFetchRemoteTunnel) {
+    btnFetchRemoteTunnel.addEventListener('click', async () => {
+      serverPingResult.className = 'server-ping-status loading';
+      serverPingResult.textContent = '🔄 Đang truy vấn link Cloudflare từ máy tính qua mạng LAN...';
+      const localBase = customApiBase || autoDiscoveredApi || 'http://192.168.1.12:3000';
+      const info = await syncServerInfo(localBase);
+      if (info && info.publicUrl) {
+        if (settingRemoteTunnelUrl) settingRemoteTunnelUrl.value = info.publicUrl;
+        serverPingResult.className = 'server-ping-status success';
+        serverPingResult.textContent = `✓ Đã nhận link Cloudflare từ máy tính: ${info.publicUrl}`;
+        showToast('🔗 Đồng bộ link Cloudflare thành công!');
+      } else {
+        serverPingResult.className = 'server-ping-status error';
+        serverPingResult.textContent = '✕ Không kết nối được LAN máy tính. Bạn hãy xem dòng trycloudflare.com trên màn hình PC và dán vào ô trên!';
+      }
+    });
+  }
+
+  // Network badge click: quick ping check or open settings
   if (networkBadge) {
     networkBadge.addEventListener('click', async () => {
       showToast('🔍 Đang kiểm tra kết nối máy chủ PC...');
@@ -975,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('✅ Máy chủ PC đang hoạt động tốt!');
       } else {
         updateNetworkStatus(false);
-        showToast('⚠️ Không kết nối được PC. Nhấn ⚙️ CÀI ĐẶT để kiểm tra IP!');
+        showToast('⚠️ Không kết nối được PC. Nhấn ⚙️ CÀI ĐẶT để kiểm tra kết nối!');
       }
     });
   }
@@ -1303,19 +1417,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Startup server connectivity check
-  pingServer(getApiBase(), 1500).then((ok) => {
-    if (ok) {
+  // Startup server connectivity check with LAN & 4G/Cloudflare fallback
+  (async function initServerConnection() {
+    const localCandidate = customApiBase || autoDiscoveredApi || 'http://192.168.1.12:3000';
+    const localOk = await pingServer(localCandidate, 1500);
+    if (localOk) {
+      activeApiBase = localCandidate;
       updateNetworkStatus(true);
-    } else {
-      autoScanServer().then((found) => {
-        if (found) {
-          updateNetworkStatus(true);
-          showToast(`🔗 Đã kết nối máy chủ: ${found}`);
-        }
-      });
+      syncServerInfo(localCandidate);
+      return;
     }
-  });
+
+    if (remoteTunnelUrl) {
+      const remoteOk = await pingServer(remoteTunnelUrl, 3000);
+      if (remoteOk) {
+        activeApiBase = remoteTunnelUrl;
+        updateNetworkStatus(true);
+        showToast('🌐 Đã kết nối máy chủ Boxmusic qua mạng 4G/Cloudflare!');
+        return;
+      }
+    }
+
+    const found = await autoScanServer();
+    if (found) {
+      activeApiBase = found;
+      updateNetworkStatus(true);
+      showToast(`🔗 Đã kết nối máy chủ: ${found}`);
+      return;
+    }
+
+    updateNetworkStatus(false);
+  })();
 
   function renderLibraryList() {
     librarySongList.innerHTML = '';
@@ -2328,49 +2460,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Network Status Management
-  function updateNetworkStatus() {
-    const isOnline = navigator.onLine;
-    if (networkBadge) {
-      networkBadge.className = `network-badge ${isOnline ? 'online' : 'offline'}`;
-      if (networkStatusText) networkStatusText.textContent = isOnline ? 'ONLINE' : 'OFFLINE';
-    }
-    if (!isOnline && searchResultsList && searchResultsList.children.length === 0) {
-      if (searchOfflineNotice) searchOfflineNotice.style.display = 'block';
-      if (searchPlaceholder) searchPlaceholder.style.display = 'none';
-    }
-  }
-
-  window.addEventListener('online', () => {
-    updateNetworkStatus();
-    showToast('🟢 Đã kết nối mạng trở lại!');
-    if (searchOfflineNotice) searchOfflineNotice.style.display = 'none';
-    if (searchPlaceholder && searchResultsList.children.length === 0) {
-      searchPlaceholder.style.display = 'block';
-    }
-  });
-
-  window.addEventListener('offline', () => {
-    updateNetworkStatus();
-    showToast('🟠 Thiết bị đang ngoại tuyến. Nhạc trong Thư viện vẫn phát bình thường 100%!');
-    if (searchResultsList && searchResultsList.children.length === 0) {
-      if (searchOfflineNotice) searchOfflineNotice.style.display = 'block';
-      if (searchPlaceholder) searchPlaceholder.style.display = 'none';
-    }
-  });
-
-  if (networkBadge) {
-    networkBadge.addEventListener('click', () => {
-      const current = getApiBase() || window.location.origin;
-      const newIp = prompt(`Địa chỉ máy chủ Boxmusic (PC):\nHiện tại: ${current}\n\nNhập địa chỉ IP mới nếu muốn đổi (ví dụ: http://192.168.1.20:3000):`, current);
-      if (newIp !== null && newIp.trim() !== '') {
-        customApiBase = newIp.trim().replace(/\/+$/, '');
-        localStorage.setItem('boxmusic_custom_api_base', customApiBase);
-        showToast(`Đã lưu máy chủ: ${customApiBase}`);
-      }
-    });
-  }
-
+  // Initial load
   updateNetworkStatus();
 
   // Initial load

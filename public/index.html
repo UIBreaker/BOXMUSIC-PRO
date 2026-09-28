@@ -684,7 +684,10 @@
 
           <!-- 3. PC Server IP & Auto Discovery -->
           <div class="settings-card-section">
-            <div class="settings-sec-title">🖥️ MÁY CHỦ PC KẾT NỐI (LAN SERVER)</div>
+            <div class="settings-sec-title">🖥️ MÁY CHỦ PC KẾT NỐI (LAN & TOÀN CẦU)</div>
+
+            <!-- LAN Option -->
+            <div class="server-config-subhead">🏠 MẠNG NỘI BỘ (WI-FI Ở NHÀ):</div>
             <div class="server-input-row">
               <input type="text" id="setting-server-ip" class="retro-input" placeholder="http://192.168.1.12:3000" autocomplete="off">
               <button id="btn-save-server-ip" class="win-btn-primary" type="button">LƯU</button>
@@ -693,7 +696,22 @@
               <button id="btn-ping-server" class="server-action-btn" type="button">⚡ KIỂM TRA</button>
               <button id="btn-scan-server" class="server-action-btn" type="button">🔍 TỰ ĐỘNG DÒ IP</button>
             </div>
+
+            <!-- Remote 4G / Cloudflare Option -->
+            <div class="server-config-subhead" style="margin-top: 14px;">🌐 KẾT NỐI TỪ XA (4G / 5G / NGOÀI NHÀ):</div>
+            <div class="server-input-row">
+              <input type="text" id="setting-remote-tunnel-url" class="retro-input" placeholder="https://xxx.trycloudflare.com" autocomplete="off">
+              <button id="btn-save-remote-tunnel" class="win-btn-primary" type="button">DÙNG</button>
+            </div>
+            <div class="server-actions-row">
+              <button id="btn-ping-remote-tunnel" class="server-action-btn" type="button">⚡ THỬ KẾT NỐI 4G</button>
+              <button id="btn-fetch-remote-tunnel" class="server-action-btn" type="button">🔄 LẤY LINK TỰ ĐỘNG</button>
+            </div>
+
             <div id="server-ping-result" class="server-ping-status"></div>
+            <div class="settings-note-text" style="margin-top: 8px;">
+              💡 <b>Mẹo:</b> Khi máy chủ PC bật, link Cloudflare <code>trycloudflare.com</code> sẽ hiện trên màn hình máy tính. Bạn có thể kết nối từ bất kỳ đâu (4G, 5G, Wi-Fi cơ quan/quán cafe) để tìm kiếm và tải nhạc!
+            </div>
           </div>
 
           <!-- 4. Version info -->

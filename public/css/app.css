@@ -2887,6 +2887,14 @@ body.has-mini-player .retro-dl-dock {
   line-height: 1.35;
 }
 
+.server-config-subhead {
+  font-family: var(--font-pixel);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 5px;
+}
+
 .server-input-row {
   display: flex;
   gap: 6px;

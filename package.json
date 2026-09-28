@@ -12,6 +12,7 @@
   "type": "commonjs",
   "dependencies": {
     "@distube/ytdl-core": "^4.16.12",
+    "cloudflared": "^0.7.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "qrcode-terminal": "^0.12.0",

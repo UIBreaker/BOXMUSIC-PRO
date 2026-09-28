@@ -35,9 +35,23 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
+let cloudflareTunnel = null;
+let currentPublicUrl = null;
+
 // Health check / ping endpoint for LAN discovery
 app.get('/api/ping', (req, res) => {
   res.json({ ok: true, version: '1.0.8', time: Date.now() });
+});
+
+// API: Get server network info (LAN + Public Cloudflare Tunnel)
+app.get('/api/server-info', (req, res) => {
+  res.json({
+    ok: true,
+    version: '1.0.8',
+    localUrl: `http://localhost:${PORT}`,
+    lanUrl: `http://${localIP}:${PORT}`,
+    publicUrl: currentPublicUrl || null
+  });
 });
 
 // API: Search songs worldwide
@@ -246,14 +260,62 @@ const localIP = getLocalIP();
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log('\n======================================================');
-  console.log('🎵 BOXMUSIC - ỨNG DỤNG NGHE NHẠC CÁ NHÂN OFFLINE');
+  console.log('🎵 BOXMUSIC - MÁY CHỦ ÂM NHẠC ĐA NỀN TẢNG (PRO)');
   console.log('======================================================');
-  console.log(`- Mở trên máy tính:    http://localhost:${PORT}`);
-  console.log(`- Mở trên ĐIỆN THOẠI:  http://${localIP}:${PORT}`);
+  console.log(`- Mở trên máy tính:        http://localhost:${PORT}`);
+  console.log(`- Mạng nội bộ Wi-Fi (LAN): http://${localIP}:${PORT}`);
   console.log('------------------------------------------------------');
   if (qrcode) {
-    console.log('Quét mã QR dưới đây bằng điện thoại để mở ngay:');
+    console.log('📱 Mã QR kết nối Wi-Fi nội bộ:');
     qrcode.generate(`http://${localIP}:${PORT}`, { small: true });
   }
-  console.log('======================================================\n');
+  console.log('======================================================');
+
+  startCloudflareTunnel(PORT);
+});
+
+function startCloudflareTunnel(port) {
+  try {
+    const { Tunnel } = require('cloudflared');
+    console.log('\n🌍 Đang khởi tạo kết nối Internet toàn cầu (Cloudflare Tunnel)...');
+    cloudflareTunnel = Tunnel.quick(`http://localhost:${port}`);
+    cloudflareTunnel.on('url', (url) => {
+      currentPublicUrl = url;
+      console.log('\n======================================================');
+      console.log('🚀 ĐÃ KÍCH HOẠT KẾT NỐI TOÀN CẦU (4G / 5G / NGOÀI NHÀ)!');
+      console.log('======================================================');
+      console.log(`🌐 Link truy cập từ bất kỳ đâu: ${url}`);
+      console.log('------------------------------------------------------');
+      if (qrcode) {
+        console.log('📱 Quét mã QR dưới đây để mở trên điện thoại (4G / 5G):');
+        qrcode.generate(url, { small: true });
+        console.log('======================================================\n');
+      }
+    });
+    cloudflareTunnel.on('error', (err) => {
+      console.warn('Lưu ý Cloudflare Tunnel:', err.message || err);
+    });
+  } catch (e) {
+    console.warn('Không thể nạp cloudflared:', e.message);
+  }
+}
+
+function cleanupTunnel() {
+  if (cloudflareTunnel && typeof cloudflareTunnel.stop === 'function') {
+    try { cloudflareTunnel.stop(); } catch (e) {}
+  }
+}
+
+process.on('SIGINT', () => {
+  cleanupTunnel();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  cleanupTunnel();
+  process.exit(0);
+});
+
+process.on('exit', () => {
+  cleanupTunnel();
 });
