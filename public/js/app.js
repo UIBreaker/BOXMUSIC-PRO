@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let customApiBase = (typeof localStorage !== 'undefined') ? localStorage.getItem('boxmusic_custom_api_base') : null;
   let autoDiscoveredApi = null;
   let remoteTunnelUrl = (typeof localStorage !== 'undefined') ? localStorage.getItem('boxmusic_remote_tunnel_url') : null;
+  let relayBucketId = (typeof localStorage !== 'undefined') ? localStorage.getItem('boxmusic_relay_bucket_id') : null;
   let activeApiBase = null;
 
   function getApiBase() {
@@ -52,14 +53,46 @@ document.addEventListener('DOMContentLoaded', () => {
       clearTimeout(tid);
       if (res.ok) {
         const data = await res.json();
-        if (data.ok && data.publicUrl) {
-          remoteTunnelUrl = data.publicUrl;
-          try { localStorage.setItem('boxmusic_remote_tunnel_url', data.publicUrl); } catch (e) {}
-          const settingTunnel = document.getElementById('setting-remote-tunnel-url');
-          if (settingTunnel && !settingTunnel.value) {
-            settingTunnel.value = data.publicUrl;
+        if (data.ok) {
+          if (data.publicUrl) {
+            remoteTunnelUrl = data.publicUrl;
+            try { localStorage.setItem('boxmusic_remote_tunnel_url', data.publicUrl); } catch (e) {}
+            const settingTunnel = document.getElementById('setting-remote-tunnel-url');
+            if (settingTunnel && !settingTunnel.value) settingTunnel.value = data.publicUrl;
+          }
+          if (data.relayId) {
+            relayBucketId = data.relayId;
+            try { localStorage.setItem('boxmusic_relay_bucket_id', data.relayId); } catch (e) {}
           }
           return data;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  // Fetch current tunnel URL from ntfy.sh relay (works from any network — 4G, work Wi-Fi)
+  async function fetchFromRelay() {
+    if (!relayBucketId) return null;
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 5000);
+      // Poll ntfy.sh for the latest message (the current Cloudflare tunnel URL)
+      const res = await fetch(`https://ntfy.sh/${relayBucketId}/json?poll=1&since=all`, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (res.ok) {
+        const text = (await res.text()).trim();
+        if (!text) return null;
+        // ntfy returns NDJSON — get the last line
+        const lines = text.split('\n').filter(Boolean);
+        const last = JSON.parse(lines[lines.length - 1]);
+        const url = last && last.message && last.message.trim();
+        if (url && url.startsWith('https://')) {
+          remoteTunnelUrl = url;
+          try { localStorage.setItem('boxmusic_remote_tunnel_url', url); } catch (e) {}
+          const settingTunnel = document.getElementById('setting-remote-tunnel-url');
+          if (settingTunnel) settingTunnel.value = url;
+          return url;
         }
       }
     } catch (e) {}
@@ -1417,17 +1450,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Startup server connectivity check with LAN & 4G/Cloudflare fallback
+  // Startup server connectivity check with LAN → 4G cache → Relay → LAN scan
   (async function initServerConnection() {
+    // 1. Try local LAN first (fastest when at home)
     const localCandidate = customApiBase || autoDiscoveredApi || 'http://192.168.1.12:3000';
     const localOk = await pingServer(localCandidate, 1500);
     if (localOk) {
       activeApiBase = localCandidate;
       updateNetworkStatus(true);
-      syncServerInfo(localCandidate);
+      syncServerInfo(localCandidate); // auto-save tunnel URL + relay ID in background
       return;
     }
 
+    // 2. Try saved tunnel URL (might be valid if server hasn't restarted)
     if (remoteTunnelUrl) {
       const remoteOk = await pingServer(remoteTunnelUrl, 3000);
       if (remoteOk) {
@@ -1438,6 +1473,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    // 3. Try relay (kvdb.io) to get the latest tunnel URL — works even after server restart
+    const relayUrl = await fetchFromRelay();
+    if (relayUrl && relayUrl !== remoteTunnelUrl) {
+      const relayOk = await pingServer(relayUrl, 3000);
+      if (relayOk) {
+        activeApiBase = relayUrl;
+        updateNetworkStatus(true);
+        showToast('🌐 Đã kết nối máy chủ Boxmusic qua 4G (relay tự động)!');
+        return;
+      }
+    }
+
+    // 4. Last resort: scan LAN (slow but thorough)
     const found = await autoScanServer();
     if (found) {
       activeApiBase = found;

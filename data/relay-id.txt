@@ -1,0 +1,1 @@
+email required: set email=user@example.com when creating the bucket

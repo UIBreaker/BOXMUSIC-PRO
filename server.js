@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const { spawn } = require('child_process');
 const yts = require('yt-search');
 const os = require('os');
@@ -37,20 +38,22 @@ app.use(express.static(path.join(__dirname, 'public'), {
 
 let cloudflareTunnel = null;
 let currentPublicUrl = null;
+let currentRelayId = null;
 
 // Health check / ping endpoint for LAN discovery
 app.get('/api/ping', (req, res) => {
   res.json({ ok: true, version: '1.0.8', time: Date.now() });
 });
 
-// API: Get server network info (LAN + Public Cloudflare Tunnel)
+// API: Get server network info (LAN + Public Cloudflare Tunnel + Relay ID)
 app.get('/api/server-info', (req, res) => {
   res.json({
     ok: true,
     version: '1.0.8',
     localUrl: `http://localhost:${PORT}`,
     lanUrl: `http://${localIP}:${PORT}`,
-    publicUrl: currentPublicUrl || null
+    publicUrl: currentPublicUrl || null,
+    relayId: currentRelayId || null
   });
 });
 
@@ -279,7 +282,7 @@ function startCloudflareTunnel(port) {
     const { Tunnel } = require('cloudflared');
     console.log('\n🌍 Đang khởi tạo kết nối Internet toàn cầu (Cloudflare Tunnel)...');
     cloudflareTunnel = Tunnel.quick(`http://localhost:${port}`);
-    cloudflareTunnel.on('url', (url) => {
+    cloudflareTunnel.on('url', async (url) => {
       currentPublicUrl = url;
       console.log('\n======================================================');
       console.log('🚀 ĐÃ KÍCH HOẠT KẾT NỐI TOÀN CẦU (4G / 5G / NGOÀI NHÀ)!');
@@ -291,6 +294,13 @@ function startCloudflareTunnel(port) {
         qrcode.generate(url, { small: true });
         console.log('======================================================\n');
       }
+      // Register tunnel URL to a global relay (kvdb.io) so phone can find it without home Wi-Fi
+      registerToRelay(url).then((relayId) => {
+        if (relayId) {
+          currentRelayId = relayId;
+          console.log(`🔑 Relay ID: ${relayId} (lưu trong ứng dụng để tự động kết nối 4G)`);
+        }
+      }).catch(() => {});
     });
     cloudflareTunnel.on('error', (err) => {
       console.warn('Lưu ý Cloudflare Tunnel:', err.message || err);
@@ -298,6 +308,32 @@ function startCloudflareTunnel(port) {
   } catch (e) {
     console.warn('Không thể nạp cloudflared:', e.message);
   }
+}
+
+// Register tunnel URL to ntfy.sh relay so phone can find it from any network (no signup needed)
+const RELAY_TOPIC_FILE = path.join(__dirname, 'data', 'relay-topic.txt');
+async function registerToRelay(tunnelUrl) {
+  try {
+    let topicId;
+    if (fs.existsSync(RELAY_TOPIC_FILE)) {
+      topicId = fs.readFileSync(RELAY_TOPIC_FILE, 'utf8').trim();
+    } else {
+      // Generate a stable random topic ID for this server installation
+      topicId = 'boxmusic-' + Math.random().toString(36).slice(2, 12);
+      fs.mkdirSync(path.dirname(RELAY_TOPIC_FILE), { recursive: true });
+      fs.writeFileSync(RELAY_TOPIC_FILE, topicId);
+    }
+    // Publish current tunnel URL to ntfy.sh (free, no account, poll-based)
+    const res = await fetch(`https://ntfy.sh/${topicId}`, {
+      method: 'POST',
+      body: tunnelUrl,
+      headers: { 'Title': 'BoxmusicTunnel', 'Tags': 'link', 'Priority': '1' }
+    });
+    if (res.ok) return topicId;
+  } catch (e) {
+    console.warn('Relay registration skipped:', e.message);
+  }
+  return null;
 }
 
 function cleanupTunnel() {
