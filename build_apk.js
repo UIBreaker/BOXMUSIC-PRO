@@ -85,7 +85,7 @@ async function build() {
   const manifestContent = `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.boxmusic.player"
-    android:versionCode="14"
+    android:versionCode="15"
     android:versionName="${APP_VERSION}">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />

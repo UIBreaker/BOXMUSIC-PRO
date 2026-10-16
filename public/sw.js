@@ -1,17 +1,17 @@
-const CACHE_NAME = 'boxmusic-cache-v114-bass-spectrum';
+const CACHE_NAME = 'boxmusic-cache-v115-balanced-player';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/css/app.css?v=1.1.4',
-  '/css/studio.css?v=1.1.4',
-  '/js/db.js?v=1.1.4',
-  '/js/visualizer.js?v=1.1.4',
-  '/js/player.js?v=1.1.4',
-  '/js/playlist-utils.js?v=1.1.4',
-  '/js/discovery.js?v=1.1.4',
-  '/js/download.js?v=1.1.4',
-  '/js/app.js?v=1.1.4',
+  '/css/app.css?v=1.1.5',
+  '/css/studio.css?v=1.1.5',
+  '/js/db.js?v=1.1.5',
+  '/js/visualizer.js?v=1.1.5',
+  '/js/player.js?v=1.1.5',
+  '/js/playlist-utils.js?v=1.1.5',
+  '/js/discovery.js?v=1.1.5',
+  '/js/download.js?v=1.1.5',
+  '/js/app.js?v=1.1.5',
   '/icons/icon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png'

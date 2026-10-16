@@ -2,7 +2,7 @@
 
 Ứng dụng nghe nhạc cá nhân phong cách Retro Pixel OS & Music Box tuyệt đẹp, hỗ trợ cả Web PWA và bản cài đặt Android APK (`Boxmusic-Pro.apk`). Cho phép nghe nhạc 100% offline, tìm kiếm và tải nhạc từ khắp nơi trên thế giới.
 
-**Bản Android mới nhất:** [Boxmusic 1.1.4 — Bass Spectrum](https://github.com/UIBreaker/BOXMUSIC-PRO/releases/tag/v1.1.4) · [Tải APK](https://github.com/UIBreaker/BOXMUSIC-PRO/releases/download/v1.1.4/Boxmusic-1.1.4.apk).
+**Bản Android mới nhất:** [Boxmusic 1.1.5 — Balanced Listening Room](https://github.com/UIBreaker/BOXMUSIC-PRO/releases/tag/v1.1.5) · [Tải APK](https://github.com/UIBreaker/BOXMUSIC-PRO/releases/download/v1.1.5/Boxmusic-1.1.5.apk).
 
 ---
 
@@ -28,7 +28,7 @@
    - Tìm playlist tiếng Việt có hoặc không dấu; sắp xếp theo tên, mới nhất hoặc số bài. Hộp thoại hỗ trợ Enter, Escape, Tab và giao diện tôn trọng tùy chọn giảm chuyển động.
    - Thanh mini-player tiện lợi khi lướt và bảng điều khiển Full Player với đĩa xoay nghệ thuật, thanh tua nhạc, trộn bài (Shuffle), lặp lại (Repeat).
    - Màn hình The Listening Room dùng biểu tượng SVG đồng nhất, thanh tua có tiến độ, trạng thái phát và nút tải trực tiếp khi đang nghe thử.
-   - Trình phát tự co mâm đĩa để vừa chiều cao màn hình, hỗ trợ bố cục ngang, không cần cuộn để tìm nút điều khiển. LED 36 cột được mở rộng, có vạch đỉnh, phản chiếu và hai bảng màu ngọc–vàng–hồng, xanh–tím. Bắt xung bass thực trong dải 35–180 Hz, tăng phản hồi ở tiếng kick và hạ sáng mềm giữa các nhịp.
+   - Trình phát tự co mâm đĩa để vừa chiều cao màn hình, hỗ trợ bố cục ngang, không cần cuộn để tìm nút điều khiển. Mâm đĩa và LED chia không gian theo chiều cao màn hình; giảm nhãn phụ trên màn thấp để giữ mâm đĩa lớn và đủ nút điều khiển. LED 36 cột có vạch đỉnh, phản chiếu và hai bảng màu ngọc–vàng–hồng, xanh–tím. Bắt xung bass thực trong dải 35–180 Hz, tăng phản hồi ở tiếng kick và hạ sáng mềm giữa các nhịp.
    - Hiệu ứng theo thời gian để giữ tốc độ trên màn hình 60/90/120 Hz; dừng vẽ LED khi đóng trình phát, tạm dừng nhạc hoặc đưa ứng dụng ra nền. Tái sử dụng bộ đệm và chỉ đo canvas khi đổi kích thước.
    - Quản lý danh sách yêu thích ❤️ và dung lượng lưu trữ (MB).
 

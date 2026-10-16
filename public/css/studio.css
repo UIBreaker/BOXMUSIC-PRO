@@ -510,9 +510,10 @@ h1 { font-size: clamp(28px, 3.1vw, 42px); font-weight: 800; line-height: 1.22; l
 .retro-player-modal {
   display: grid;
   grid-template-rows: auto auto minmax(0,1fr) auto auto auto auto auto auto;
-  gap: clamp(7px,1.1dvh,11px);
+  gap: clamp(6px,.85dvh,8px);
   height: 100dvh;
-  padding: calc(14px + env(safe-area-inset-top)) 22px calc(12px + env(safe-area-inset-bottom));
+  container-type: size;
+  padding: calc(10px + env(safe-area-inset-top)) max(22px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-left));
   overflow: hidden;
   overscroll-behavior: contain;
   transition: transform .42s cubic-bezier(.22,.8,.25,1), visibility .42s;
@@ -520,7 +521,7 @@ h1 { font-size: clamp(28px, 3.1vw, 42px); font-weight: 800; line-height: 1.22; l
 }
 .retro-player-modal.open { visibility: visible; }
 .retro-player-modal > * { min-width: 0; }
-.retro-player-modal .player-win-bar { margin: 0; min-height: 44px; }
+.retro-player-modal .player-win-bar { margin: 0; min-height: 44px; padding-top: 5px; padding-bottom: 5px; }
 .retro-player-modal .player-session-label { margin: 0 auto; min-height: 10px; }
 .retro-player-modal .turntable-deck-frame {
   width: auto;
@@ -545,7 +546,7 @@ h1 { font-size: clamp(28px, 3.1vw, 42px); font-weight: 800; line-height: 1.22; l
 @container (max-height: 180px) { .turntable-deck .tone-arm-assembly { scale: .52; } }
 @container (max-height: 135px) { .turntable-deck .tone-arm-assembly { scale: .38; } }
 .retro-player-modal .retro-vis-box {
-  width: 100%; height: clamp(132px,17.5dvh,160px); margin: 0; padding: 28px 14px 22px;
+  width: 100%; height: clamp(100px,13.5dvh,120px); margin: 0; padding: 26px 14px 20px;
   border-radius: 14px; border: 1px solid #48627c;
   background: radial-gradient(ellipse at 15% 100%,#1c4c5055 0,transparent 60%),radial-gradient(ellipse at 85% 0,#3c315855 0,transparent 70%),#111e30;
   box-shadow: inset 0 1px 0 #ffffff18,0 3px 0 #dbe0e8,0 7px 15px #2334510b;
@@ -566,19 +567,24 @@ h1 { font-size: clamp(28px, 3.1vw, 42px); font-weight: 800; line-height: 1.22; l
 .retro-player-modal .player-song-artist { margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .retro-player-modal .retro-scrubber { margin: 0; }
 .retro-player-modal .retro-controls { margin: 0; min-height: 68px; }
-.retro-player-modal .player-smart-bar { padding: 5px; }
+.retro-player-modal .player-smart-bar { padding: 4px; }
 .retro-player-modal .smart-tool-btn { min-height: 42px; }
 .retro-player-modal .player-save-row { margin: 0; min-height: 32px; font-size: .57rem; }
 .retro-player-modal .player-save-button { padding: 6px 9px; }
-.retro-player-modal .player-glow { filter: none; background: radial-gradient(circle,#d6e2f555,transparent 70%); }
+.retro-player-modal .player-glow { width: min(280px,60dvh); height: min(280px,60dvh); filter: none; background: radial-gradient(circle,#d6e2f555,transparent 70%); }
 .retro-player-modal:not(.open) .vinyl-disc { animation-play-state: paused; }
+@media (orientation: portrait) {
+  .retro-player-modal .retro-vis-box { max-height: 16cqh; }
+}
 
-@media (max-height: 700px) {
-  .retro-player-modal { gap: 6px; padding-top: calc(8px + env(safe-area-inset-top)); padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
-  .retro-player-modal .player-win-bar { min-height: 38px; padding-top: 4px; padding-bottom: 4px; }
-  .retro-player-modal .player-session-label { font-size: 5px; min-height: 8px; }
-  .retro-player-modal .retro-vis-box { height: 116px; padding-top: 25px; }
+@media (max-height: 780px) {
   .retro-player-modal .player-meta-eyebrow { display: none; }
+}
+@media (max-height: 700px) {
+  .retro-player-modal { grid-template-rows: auto minmax(0,1fr) auto auto auto auto auto auto; gap: 5px; padding-top: calc(6px + env(safe-area-inset-top)); padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
+  .retro-player-modal .player-win-bar { min-height: 38px; padding-top: 2px; padding-bottom: 2px; }
+  .retro-player-modal .player-session-label { display: none; }
+  .retro-player-modal .retro-vis-box { height: 96px; padding-top: 24px; }
   .retro-player-modal .player-song-title { font-size: 20px; line-height: 1.2; }
   .retro-player-modal .player-song-artist { font-size: .72rem; }
   .retro-player-modal .retro-controls { min-height: 54px; }
@@ -587,23 +593,28 @@ h1 { font-size: clamp(28px, 3.1vw, 42px); font-weight: 800; line-height: 1.22; l
   .retro-player-modal .player-save-row { min-height: 28px; font-size: .5rem; gap: 8px; }
 }
 @media (max-height: 590px) and (orientation: portrait) {
-  .retro-player-modal { grid-template-rows: auto minmax(0,1fr) auto auto auto auto auto auto; gap: 5px; }
-  .retro-player-modal .player-session-label { display: none; }
-  .retro-player-modal .retro-vis-box { height: 102px; padding-top: 24px; padding-bottom: 20px; }
+  .retro-player-modal { gap: 4px; }
+  .retro-player-modal .retro-vis-box { height: 84px; padding-top: 23px; padding-bottom: 18px; }
   .retro-player-modal .player-win-bar { min-height: 36px; }
 }
-@media (orientation: landscape) and (max-height: 600px) and (min-width: 600px) {
-  .retro-player-modal { left: 0; right: 0; width: 100%; max-width: 100%; margin-left: 0; grid-template-columns: minmax(0,.9fr) minmax(0,1.1fr); grid-template-rows: 38px 100px minmax(0,1fr) 38px 52px 50px; column-gap: 26px; }
+@media (orientation: landscape) and (max-height: 600px) and (min-width: 480px) {
+  .retro-player-modal { left: 0; right: 0; width: 100%; max-width: 100%; margin-left: 0; grid-template-columns: minmax(0,1fr) minmax(0,1.1fr); grid-template-rows: 38px 88px minmax(0,1fr) 38px 52px 50px; column-gap: 22px; }
   .retro-player-modal .player-win-bar { grid-column: 1 / -1; }
   .retro-player-modal .player-session-label { display: none; }
   .retro-player-modal .turntable-deck-frame { grid-column: 1; grid-row: 2 / 6; max-height: 100%; max-width: 100%; }
-  .retro-player-modal .retro-vis-box { grid-column: 2; grid-row: 2; height: 100px; }
+  .retro-player-modal .retro-vis-box { grid-column: 2; grid-row: 2; height: 88px; }
   .retro-player-modal .retro-meta { grid-column: 2; grid-row: 3; }
   .retro-player-modal .player-song-title { -webkit-line-clamp: 1; font-size: 20px; }
   .retro-player-modal .retro-scrubber { grid-column: 2; grid-row: 4; }
   .retro-player-modal .retro-controls { grid-column: 2; grid-row: 5; min-height: 50px; }
   .retro-player-modal .player-smart-bar { grid-column: 2; grid-row: 6; }
   .retro-player-modal .player-save-row { grid-column: 1; grid-row: 6; }
+}
+@media (orientation: landscape) and (max-height: 360px) and (min-width: 480px) {
+  .retro-player-modal { gap: 4px 18px; grid-template-rows: 38px 78px minmax(0,1fr) 34px 48px 46px; }
+  .retro-player-modal .retro-vis-box { height: 78px; }
+  .retro-player-modal .retro-controls { min-height: 48px; }
+  .retro-player-modal .btn-retro-play-main { width: 46px; height: 46px; }
 }
 
 /* Animate transforms instead of height, and stop decorative work off screen. */
