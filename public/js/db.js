@@ -73,7 +73,8 @@ class MusicDB {
       };
 
       const req = store.put(songData);
-      req.onsuccess = () => resolve(songData);
+      tx.oncomplete = () => resolve(songData);
+      tx.onabort = () => reject(tx.error || new Error('Không thể lưu bài hát'));
       req.onerror = () => reject(req.error);
     });
   }
@@ -138,8 +139,8 @@ class MusicDB {
     });
   }
 
-  async getStats() {
-    const songs = await this.getAllSongs();
+  async getStats(songs = null) {
+    if (!songs) songs = await this.getAllSongs();
     const count = songs.length;
     let totalBytes = 0;
     let favoritesCount = 0;
@@ -155,6 +156,26 @@ class MusicDB {
       totalMB: (totalBytes / (1024 * 1024)).toFixed(1),
       favoritesCount
     };
+  }
+
+  async updateSongThumbnail(id, thumbnailBlob) {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      let song = null;
+      const request = store.get(id);
+      request.onsuccess = () => {
+        song = request.result || null;
+        if (song && !song.thumbnailBlob) {
+          song.thumbnailBlob = thumbnailBlob;
+          store.put(song);
+        }
+      };
+      tx.oncomplete = () => resolve(song);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('Không thể lưu ảnh bìa'));
+    });
   }
 
   // --- Playlist Operations (Hoàn Toàn Offline) ---

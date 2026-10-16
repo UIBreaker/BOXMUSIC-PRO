@@ -5,6 +5,7 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const yts = require('yt-search');
 const os = require('os');
+const { AUDIO_PROBE_SIZE, createRangedDownload, createDirectUrlResolver, pipeUpstream } = require('./lib/audio-stream');
 let qrcode = null;
 try {
   qrcode = require('qrcode-terminal');
@@ -42,14 +43,14 @@ let currentRelayId = null;
 
 // Health check / ping endpoint for LAN discovery
 app.get('/api/ping', (req, res) => {
-  res.json({ ok: true, version: '1.0.8', time: Date.now() });
+  res.json({ ok: true, version: '1.1.2', time: Date.now() });
 });
 
 // API: Get server network info (LAN + Public Cloudflare Tunnel + Relay ID)
 app.get('/api/server-info', (req, res) => {
   res.json({
     ok: true,
-    version: '1.0.8',
+    version: '1.1.2',
     localUrl: `http://localhost:${PORT}`,
     lanUrl: `http://${localIP}:${PORT}`,
     publicUrl: currentPublicUrl || null,
@@ -83,81 +84,33 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
-// In-memory cache for resolved direct stream URLs (30 min TTL)
-const streamUrlCache = new Map();
-
-async function resolveDirectUrl(id) {
-  const cached = streamUrlCache.get(id);
-  if (cached && Date.now() < cached.expireAt) {
-    return cached.url;
-  }
-
-  const videoUrl = `https://www.youtube.com/watch?v=${id}`;
-  return new Promise((resolve, reject) => {
-    const proc = spawn('python', [
-      '-m', 'yt_dlp',
-      '--js-runtimes', 'node',
-      '-f', 'ba[ext=m4a]/ba/b',
-      '-g',
-      videoUrl
-    ]);
-
-    let directUrl = '';
-    proc.stdout.on('data', (d) => directUrl += d.toString());
-    proc.on('close', (code) => {
-      directUrl = directUrl.trim();
-      if (code === 0 && directUrl && directUrl.startsWith('http')) {
-        streamUrlCache.set(id, {
-          url: directUrl,
-          expireAt: Date.now() + 30 * 60 * 1000 // 30 minutes
-        });
-        resolve(directUrl);
-      } else {
-        reject(new Error('Failed to resolve direct url'));
-      }
-    });
-    proc.on('error', reject);
+// A preview and an explicit download share one cached extraction, including while pending.
+const resolveDirectUrl = createDirectUrlResolver((id) => new Promise((resolve, reject) => {
+  const proc = spawn('python', [
+    '-m', 'yt_dlp', '--js-runtimes', 'node',
+    '-f', 'ba[ext=m4a]/ba/b', '-g',
+    `https://www.youtube.com/watch?v=${id}`
+  ]);
+  const timer = setTimeout(() => {
+    proc.kill();
+    reject(new Error('Audio source extraction timed out'));
+  }, 30000);
+  let directUrl = '';
+  proc.stderr.resume();
+  proc.stdout.on('data', (data) => { directUrl += data.toString(); });
+  proc.once('error', (error) => { clearTimeout(timer); reject(error); });
+  proc.once('close', (code) => {
+    clearTimeout(timer);
+    directUrl = directUrl.trim();
+    if (code === 0 && /^https?:\/\/\S+$/.test(directUrl)) resolve(directUrl);
+    else reject(new Error('Failed to resolve direct URL'));
   });
-}
-
-function pipeUpstream(req, res, upstream) {
-  res.status(upstream.status);
-  res.setHeader('Content-Type', upstream.headers.get('content-type') || 'audio/mp4');
-  const clen = upstream.headers.get('content-length');
-  if (clen) {
-    res.setHeader('Content-Length', clen);
-    res.setHeader('X-Total-Bytes', clen);
-  }
-  const crange = upstream.headers.get('content-range');
-  if (crange) res.setHeader('Content-Range', crange);
-  res.setHeader('Accept-Ranges', 'bytes');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, X-Total-Bytes');
-  res.setHeader('Cache-Control', 'public, max-age=86400');
-
-  if (req.method === 'HEAD') {
-    return res.end();
-  }
-
-  const reader = upstream.body.getReader();
-  const pump = async () => {
-    try {
-      const { done, value } = await reader.read();
-      if (done) return res.end();
-      res.write(Buffer.from(value));
-      return pump();
-    } catch (e) {
-      res.end();
-    }
-  };
-  req.on('close', () => reader.cancel());
-  return pump();
-}
+}));
 
 // API: Stream / Download audio directly
 app.get('/api/download', async (req, res) => {
   let id = req.query.id;
-  if (!id) return res.status(400).send('Missing ID');
+  if (typeof id !== 'string' || !id) return res.status(400).send('Missing ID');
   id = id.replace(/^yt_/, '').trim();
 
   if (!/^[\w-]+$/.test(id)) {
@@ -170,7 +123,11 @@ app.get('/api/download', async (req, res) => {
   if (req.headers.range) {
     upstreamHeaders['Range'] = req.headers.range;
   }
+  const accelerated = req.query.download === '1' && !req.headers.range && req.method !== 'HEAD';
+  if (accelerated) upstreamHeaders.Range = `bytes=0-${AUDIO_PROBE_SIZE - 1}`;
 
+  const controller = new AbortController();
+  res.once('close', () => controller.abort());
   let directUrl = null;
   try {
     directUrl = await resolveDirectUrl(id);
@@ -178,24 +135,35 @@ app.get('/api/download', async (req, res) => {
     console.warn(`Direct URL resolve failed for ${id}:`, err.message);
   }
 
+  if (res.destroyed) return;
   if (directUrl) {
     try {
-      let upstream = await fetch(directUrl, { headers: upstreamHeaders });
+      let upstream = await fetch(directUrl, { headers: upstreamHeaders, signal: controller.signal });
 
       if (upstream.status === 403 || upstream.status === 410) {
-        streamUrlCache.delete(id);
+        await upstream.body?.cancel();
+        resolveDirectUrl.invalidate(id, directUrl);
         directUrl = await resolveDirectUrl(id);
-        upstream = await fetch(directUrl, { headers: upstreamHeaders });
+        upstream = await fetch(directUrl, { headers: upstreamHeaders, signal: controller.signal });
       }
 
       if (upstream.ok || upstream.status === 206) {
+        if (accelerated) upstream = createRangedDownload(upstream, async (start, end) => {
+          const part = await fetch(directUrl, {
+            headers: { ...upstreamHeaders, Range: `bytes=${start}-${end}` }, signal: controller.signal
+          });
+          if (part.status === 403 || part.status === 410) resolveDirectUrl.invalidate(id, directUrl);
+          return part;
+        });
         return pipeUpstream(req, res, upstream);
       }
+      await upstream.body?.cancel();
     } catch (err) {
       console.warn('Direct stream proxy failed, using stdout fallback:', err.message);
     }
   }
 
+  if (res.destroyed) return;
   // Fallback: direct pipe from yt-dlp
   const videoUrl = `https://www.youtube.com/watch?v=${id}`;
   const fallbackProc = spawn('python', [
@@ -206,13 +174,23 @@ app.get('/api/download', async (req, res) => {
     videoUrl
   ]);
 
+  for (const header of ['Content-Length', 'Content-Range', 'X-Total-Bytes']) res.removeHeader(header);
   res.setHeader('Content-Type', 'audio/mp4');
-  res.setHeader('Accept-Ranges', 'bytes');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, X-Total-Bytes');
-  fallbackProc.stdout.pipe(res);
-  req.on('close', () => {
-    if (!fallbackProc.killed) fallbackProc.kill();
+  res.setHeader('Accept-Ranges', 'none');
+  fallbackProc.stderr.resume();
+  fallbackProc.stdout.pipe(res, { end: false });
+  fallbackProc.once('error', () => {
+    if (!res.headersSent) res.status(502).send('Không thể khởi động tải nhạc');
+    else res.destroy();
+  });
+  fallbackProc.once('close', (code) => {
+    if (res.destroyed || res.writableEnded) return;
+    if (code === 0) res.end();
+    else if (!res.headersSent) res.status(502).send('Không thể tải nguồn âm thanh');
+    else res.destroy(new Error('Audio download interrupted'));
+  });
+  res.once('close', () => {
+    if (fallbackProc.exitCode === null && !fallbackProc.killed) fallbackProc.kill();
   });
 });
 
@@ -223,8 +201,10 @@ app.get('/api/proxy-image', async (req, res) => {
     return res.status(400).send('Missing url parameter');
   }
 
+  const controller = new AbortController();
+  res.once('close', () => controller.abort());
   try {
-    const upstreamRes = await fetch(imageUrl);
+    const upstreamRes = await fetch(imageUrl, { signal: controller.signal });
     if (!upstreamRes.ok) {
       return res.status(upstreamRes.status).send('Failed to fetch image');
     }
@@ -236,6 +216,7 @@ app.get('/api/proxy-image', async (req, res) => {
     const arrayBuffer = await upstreamRes.arrayBuffer();
     res.send(Buffer.from(arrayBuffer));
   } catch (err) {
+    if (res.destroyed) return;
     console.error('Image proxy error:', err.message);
     res.status(500).send('Proxy error');
   }
@@ -261,7 +242,7 @@ function getLocalIP() {
 
 const localIP = getLocalIP();
 
-app.listen(PORT, '0.0.0.0', () => {
+if (require.main === module) app.listen(PORT, '0.0.0.0', () => {
   console.log('\n======================================================');
   console.log('🎵 BOXMUSIC - MÁY CHỦ ÂM NHẠC ĐA NỀN TẢNG (PRO)');
   console.log('======================================================');
@@ -355,3 +336,5 @@ process.on('SIGTERM', () => {
 process.on('exit', () => {
   cleanupTunnel();
 });
+
+module.exports = app;

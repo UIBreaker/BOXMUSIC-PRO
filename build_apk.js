@@ -3,6 +3,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const PROJECT_ROOT = __dirname;
+const APP_VERSION = require('./package.json').version;
 const TOOLCHAIN = path.join(PROJECT_ROOT, 'android-toolchain', 'android-13');
 const ANDROID_JAR = path.join(TOOLCHAIN, 'android.jar');
 const AAPT2 = path.join(TOOLCHAIN, 'aapt2.exe');
@@ -84,8 +85,8 @@ async function build() {
   const manifestContent = `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.boxmusic.player"
-    android:versionCode="9"
-    android:versionName="1.0.8">
+    android:versionCode="14"
+    android:versionName="${APP_VERSION}">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34" />
 
@@ -579,6 +580,8 @@ public class MainActivity extends Activity {
   const v2Apk = path.join(OUTPUT_DIR, 'Boxmusic-v2.apk');
   fs.copyFileSync(FINAL_APK, proApk);
   fs.copyFileSync(FINAL_APK, v2Apk);
+  const versionedApk = path.join(OUTPUT_DIR, `Boxmusic-${APP_VERSION}.apk`);
+  fs.copyFileSync(FINAL_APK, versionedApk);
 
   const stats = fs.statSync(FINAL_APK);
   console.log('\n======================================================');
@@ -586,6 +589,7 @@ public class MainActivity extends Activity {
   console.log(`- APK Standard: ${FINAL_APK}`);
   console.log(`- APK Pro:      ${proApk}`);
   console.log(`- APK v2:       ${v2Apk}`);
+  console.log(`- APK ${APP_VERSION}:    ${versionedApk}`);
   console.log(`- Size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
   console.log('======================================================\n');
 }

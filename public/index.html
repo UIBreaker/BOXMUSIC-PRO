@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>BOXMUSIC.EXE - Retro Music Player</title>
   
   <!-- PWA Meta Tags -->
@@ -19,10 +19,32 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/app.css?v=1.0.8">
+  <link rel="stylesheet" href="css/app.css?v=1.1.4">
+  <link rel="stylesheet" href="css/studio.css?v=1.1.4">
 </head>
 <body class="retro-body">
   <div id="app">
+    <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <symbol id="icon-play" viewBox="0 0 24 24"><path d="m9 5 11 7-11 7Z" fill="currentColor" stroke="none"/></symbol>
+        <symbol id="icon-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke-width="3.5"/></symbol>
+        <symbol id="icon-next" viewBox="0 0 24 24"><path d="m5 6 10 6-10 6Z" fill="currentColor" stroke="none"/><path d="M19 5v14"/></symbol>
+        <symbol id="icon-prev" viewBox="0 0 24 24"><path d="m19 6-10 6 10 6Z" fill="currentColor" stroke="none"/><path d="M5 5v14"/></symbol>
+        <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+        <symbol id="icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+        <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+        <symbol id="icon-down" viewBox="0 0 24 24"><path d="m5 9 7 7 7-7"/></symbol>
+        <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 15v5h16v-5"/></symbol>
+        <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+        <symbol id="icon-shuffle" viewBox="0 0 24 24"><path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 4-3 6-6s4-6 6-6h3m-4-4 4 4-4 4"/></symbol>
+        <symbol id="icon-repeat" viewBox="0 0 24 24"><path d="M4 10V8a3 3 0 0 1 3-3h13m-4-4 4 4-4 4M20 14v2a3 3 0 0 1-3 3H4m4-4-4 4 4 4"/></symbol>
+        <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></symbol>
+        <symbol id="icon-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h7M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+        <symbol id="icon-wave" viewBox="0 0 24 24"><path d="M4 9v6m4-10v14m4-11v8m4-13v18m4-12v6"/></symbol>
+        <symbol id="icon-bass" viewBox="0 0 24 24"><path d="M4 9v6m5-9v12m5-14v16m5-12v8"/></symbol>
+        <symbol id="icon-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+      </defs>
+    </svg>
 
 
 
@@ -196,20 +218,20 @@
     <!-- Retro Desktop Header -->
     <header class="app-header retro-os-header">
       <div class="retro-os-brand">
-        <div class="os-icon">💾</div>
+        <div class="os-icon"><img src="icons/icon.svg" alt="" width="38" height="38"></div>
         <div class="os-title-col">
           <span class="os-window-name">BOXMUSIC.EXE</span>
-          <span id="greeting-time" class="os-substatus">HỆ THỐNG V1.0.8</span>
+          <span id="greeting-time" class="os-substatus">YOUR PERSONAL MUSIC SPACE</span>
         </div>
       </div>
       <div class="header-actions-row">
-        <button id="btn-open-settings" class="btn-retro-header-settings" type="button" title="Cài đặt hệ thống & máy chủ">
+        <button id="btn-open-settings" class="btn-retro-header-settings" type="button" aria-label="Cài đặt hệ thống và máy chủ" title="Cài đặt hệ thống & máy chủ">
           <span>⚙️ CÀI ĐẶT</span>
         </button>
-        <div id="network-badge" class="network-badge online" title="Chạm để kiểm tra máy chủ">
+        <button id="network-badge" class="network-badge online" type="button" title="Chạm để kiểm tra máy chủ">
           <span class="dot"></span>
           <span id="network-status-text">ONLINE</span>
-        </div>
+        </button>
       </div>
     </header>
 
@@ -218,6 +240,11 @@
       
       <!-- TAB 1: THƯ VIỆN OFFLINE -->
       <section id="library-view" class="view-panel active">
+        <div class="page-heading">
+          <div><span class="eyebrow">YOUR MUSIC, ALWAYS WITH YOU</span><h1>Thư viện của bạn<span class="heading-dot">.</span></h1><p>Những giai điệu yêu thích. Luôn ở đây, kể cả khi offline.</p></div>
+          <button id="btn-import-file" class="studio-button primary" type="button"><span aria-hidden="true">＋</span> Thêm nhạc</button>
+          <input id="local-file-input" type="file" accept="audio/*,video/mp4,.mp3,.m4a,.wav,.ogg,.flac" multiple hidden>
+        </div>
         <!-- Modern Clear Stats Dashboard -->
         <div class="library-dashboard-bar">
           <div class="dash-stat-item">
@@ -267,52 +294,63 @@
 
         <!-- Empty state when no songs -->
         <div id="library-empty" class="empty-state retro-empty" style="display: none;">
-          <div class="empty-retro-art">📻</div>
-          <div class="empty-title">CHƯA CÓ BÀI HÁT</div>
-          <div class="empty-desc">Nhấp <b>TÌM KIẾM</b> để tải nhạc thế giới và nghe offline mọi lúc mọi nơi!</div>
+          <div class="empty-record" aria-hidden="true"><span>♪</span></div>
+          <div class="empty-title">Một thư viện, cả thế giới âm nhạc</div>
+          <div class="empty-desc">Thêm nhạc từ máy hoặc khám phá bài hát mới.<br>Giai điệu của riêng bạn bắt đầu từ đây.</div>
+          <button class="studio-button primary" type="button" data-goto="search-view">Khám phá âm nhạc <span aria-hidden="true">↗</span></button>
         </div>
       </section>
 
       <!-- TAB 2: DANH SÁCH PHÁT (PLAYLISTS OFFLINE) -->
       <section id="playlist-view" class="view-panel">
-        <div class="retro-window-box">
-          <div class="retro-window-header-sm">
-            <span>📑 C:\MUSIC\PLAYLISTS</span>
-            <span id="playlist-stats" class="win-counter">0 PLAYLIST</span>
+        <div class="section-path"><span>C:\MUSIC\PLAYLISTS</span><span class="path-status">● SAVED OFFLINE</span></div>
+        <div class="playlist-hero">
+          <div class="playlist-hero-copy">
+            <span class="eyebrow">CURATED BY YOU. MADE FOR YOU.</span>
+            <h1>Mỗi tâm trạng.<br>Một playlist<span class="heading-dot">.</span></h1>
+            <p>Gom những giai điệu thành thế giới của riêng bạn.</p>
+            <button id="btn-create-playlist" class="studio-button primary" type="button"><span aria-hidden="true">＋</span> Tạo playlist mới</button>
           </div>
-          <div class="retro-window-inner">
-            <button id="btn-create-playlist" class="btn-retro-create-pl" type="button">
-              <span>➕ TẠO PLAYLIST MỚI</span>
-            </button>
-          </div>
+          <div class="mixtape-art" aria-hidden="true"><div class="mixtape-vinyl"></div><div class="mixtape-sleeve"><span>BOX<br>MIX.</span><div class="sleeve-star">✳</div><small>GOOD MUSIC. GOOD MOOD.</small></div><span class="mixtape-sticker">100%<br>YOUR VIBE</span></div>
+        </div>
+        <div class="collection-heading"><div><h2>Bộ sưu tập của bạn</h2><span id="playlist-stats">0 playlist</span></div><span class="collection-note">Một chút cá tính trong từng bản mix.</span></div>
+        <div class="playlist-toolbar">
+          <label class="collection-search"><span aria-hidden="true">⌕</span><input id="playlist-search" type="search" placeholder="Tìm trong playlist của bạn..." aria-label="Tìm playlist" autocomplete="off"></label>
+          <label class="collection-sort"><span>Sắp xếp</span><select id="playlist-sort" aria-label="Sắp xếp playlist"><option value="newest">Mới nhất</option><option value="name">Tên A–Z</option><option value="songs">Nhiều bài nhất</option></select></label>
         </div>
 
         <!-- Playlist Grid / Cards Container -->
-        <div id="playlist-cards-container" class="playlist-grid">
+        <div id="playlist-cards-container" class="playlist-grid" aria-live="polite">
           <!-- Dynamically populated -->
         </div>
 
         <!-- Empty state when no playlists -->
         <div id="playlist-empty" class="empty-state retro-empty" style="display: none;">
-          <div class="empty-retro-art">📑</div>
-          <div class="empty-title">CHƯA CÓ PLAYLIST</div>
-          <div class="empty-desc">Nhấp <b>TẠO PLAYLIST MỚI</b> để gom nhóm các bài hát yêu thích theo chủ đề (Lofi, Chill, Gym...) hoàn toàn offline!</div>
+          <div class="empty-record" aria-hidden="true"><span>♫</span></div>
+          <div class="empty-title">Bản mix đầu tiên đang chờ bạn</div>
+          <div class="empty-desc">Một buổi sáng chậm rãi, một chuyến đi xa…<br>Tạo playlist để lưu lại âm thanh của từng khoảnh khắc.</div>
+          <button class="studio-button secondary" id="btn-create-first-playlist" type="button">＋ Tạo playlist đầu tiên</button>
         </div>
+        <div id="playlist-no-results" class="empty-state retro-empty" hidden><div class="empty-title">Chưa tìm thấy playlist</div><div class="empty-desc">Thử một tên khác hoặc xóa từ khóa tìm kiếm.</div><button id="btn-reset-playlist-search" class="studio-button secondary" type="button">Xóa tìm kiếm</button></div>
+        <div class="collection-footer"><span>✦ THE SOUND OF YOUR EVERYDAY</span><span>BOXMUSIC / PERSONAL COLLECTION</span></div>
       </section>
 
       <!-- TAB 3: TÌM KIẾM THẾ GIỚI -->
       <section id="search-view" class="view-panel">
+        <div class="page-heading"><div><span class="eyebrow">FIND YOUR NEXT FAVORITE</span><h1>Khám phá âm nhạc<span class="heading-dot">.</span></h1><p>Một bài hát mới, một cảm hứng mới. Hôm nay bạn muốn nghe gì?</p></div></div>
         <div class="retro-window-box">
           <div class="retro-window-header-sm">
             <span>🌐 C:\INTERNET\SEARCH.EXE</span>
             <span class="win-counter">WORLD MUSIC</span>
           </div>
           <div class="retro-window-inner">
-            <div class="search-bar-wrap retro-search">
-              <span class="search-icon-left">🔍</span>
-              <input type="search" id="search-input" class="search-input retro-input" placeholder="TÌM BÀI HÁT, CA SĨ TOÀN CẦU..." autocomplete="off">
-              <button id="search-clear-btn" class="search-clear-btn" type="button">✕</button>
-            </div>
+            <form id="search-form" class="search-bar-wrap retro-search" role="search">
+              <svg class="ui-icon search-icon-left" aria-hidden="true"><use href="#icon-search"/></svg>
+              <input type="search" id="search-input" class="search-input" placeholder="Bài hát, nghệ sĩ bạn muốn nghe..." aria-label="Tìm bài hát hoặc nghệ sĩ" autocomplete="off" enterkeyhint="search">
+              <button id="search-clear-btn" class="search-clear-btn" type="button" aria-label="Xóa tìm kiếm"><svg class="ui-icon" aria-hidden="true"><use href="#icon-close"/></svg></button>
+              <button class="search-submit" type="submit" aria-label="Tìm kiếm"><svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow"/></svg></button>
+            </form>
+            <p class="discovery-search-note">Nghe thử trước. Tải về khi tìm thấy bài bạn thích.</p>
 
             <!-- Genre Suggestion Chips -->
             <div class="genre-chips-wrap">
@@ -343,6 +381,7 @@
           </button>
         </div>
 
+        <div id="search-results-summary" class="discovery-results-heading" role="status" hidden><h2>Kết quả tìm kiếm</h2><span id="search-result-count"></span></div>
         <!-- Search Results List -->
         <div id="search-results-list" class="song-list">
           <!-- Dynamically populated -->
@@ -403,28 +442,30 @@
       </div>
       <div class="mini-controls">
         <button id="mini-btn-play" class="btn-retro-square" type="button" aria-label="Play/Pause">
-          <span id="mini-play-icon">▶</span>
+          <span id="mini-play-icon"><svg class="ui-icon" aria-hidden="true"><use href="#icon-play"/></svg></span>
         </button>
-        <button id="mini-btn-next" class="btn-retro-square" type="button" aria-label="Next">
-          <span>⏭</span>
+        <button id="mini-btn-next" class="btn-retro-square" type="button" aria-label="Bài tiếp theo">
+          <svg class="ui-icon" aria-hidden="true"><use href="#icon-next"/></svg>
         </button>
       </div>
     </div>
 
     <!-- RETRO BOTTOM NAVIGATION BAR -->
-    <nav class="bottom-nav retro-dock">
-      <button class="nav-item active" data-tab="library-view" type="button">
-        <div class="nav-icon-wrap">📁</div>
-        <span>THƯ VIỆN</span>
+    <nav class="bottom-nav retro-dock" aria-label="Điều hướng chính">
+      <div class="nav-caption">YOUR WORKSPACE</div>
+      <button class="nav-item active" data-tab="library-view" type="button" aria-current="page">
+        <div class="nav-icon-wrap" aria-hidden="true">▤</div>
+        <span>Thư viện</span><span class="nav-shortcut">01</span>
       </button>
       <button class="nav-item" data-tab="playlist-view" type="button">
-        <div class="nav-icon-wrap">📑</div>
-        <span>PLAYLIST</span>
+        <div class="nav-icon-wrap" aria-hidden="true">▦</div>
+        <span>Playlist</span><span class="nav-shortcut">02</span>
       </button>
       <button class="nav-item" data-tab="search-view" type="button">
-        <div class="nav-icon-wrap">🔍</div>
-        <span>TÌM KIẾM</span>
+        <div class="nav-icon-wrap" aria-hidden="true">⌕</div>
+        <span>Khám phá</span><span class="nav-shortcut">03</span>
       </button>
+      <div class="sidebar-note"><span class="sidebar-note-icon">✳</span><strong>Keep the music.<br>Keep the feeling.</strong><p>Không gian nhỏ.<br>Âm nhạc không giới hạn.</p><span class="eyebrow">EST. 2026 / ALWAYS ON</span></div>
     </nav>
 
     <!-- ========================================================
@@ -434,20 +475,23 @@
       <!-- Window Title Bar -->
       <div class="retro-title-bar player-win-bar">
         <div class="retro-title-text">
-          <span class="pixel-icon-disk">📻</span> C:\MUSIC\TURNTABLE.EXE
+          <svg class="ui-icon" aria-hidden="true"><use href="#icon-wave"/></svg> THE LISTENING ROOM
         </div>
         <div class="retro-window-controls">
-          <button id="btn-minimize-player" class="win-btn-gray-sm" type="button" title="Thu nhỏ">🗕</button>
-          <button id="btn-close-player" class="win-btn-red" type="button" aria-label="Close">✕</button>
+          <button id="btn-minimize-player" class="win-btn-gray-sm" type="button" aria-label="Thu nhỏ trình phát" title="Thu nhỏ"><svg class="ui-icon" aria-hidden="true"><use href="#icon-down"/></svg></button>
+          <button id="btn-close-player" class="win-btn-red" type="button" aria-label="Đóng trình phát"><svg class="ui-icon" aria-hidden="true"><use href="#icon-close"/></svg></button>
         </div>
       </div>
 
       <!-- Ambient Dynamic Glow Backdrop -->
       <div id="player-glow" class="player-glow"></div>
+      <div class="player-session-label"><span id="player-source-badge">YOUR PERSONAL COLLECTION</span><span>33⅓ RPM / SIDE A</span></div>
 
       <!-- Permanent Retro Vinyl Turntable Showcase (Chỉ hiện đĩa xoay theo yêu cầu) -->
       <div class="turntable-deck-frame">
         <div class="turntable-deck">
+          <div class="deck-brand" aria-hidden="true">BOX<span>HIGH FIDELITY / STEREO</span></div>
+          <span class="deck-power" aria-hidden="true"></span>
           <!-- The Rotating Vinyl Disc -->
           <div class="vinyl-container">
             <div class="vinyl-disc" id="vinyl-disc">
@@ -474,24 +518,26 @@
 
       <!-- Retro LED Spectrum Visualizer Canvas -->
       <div class="visualizer-container retro-vis-box">
-        <div class="vis-header-tag">8-BIT STEREO ANALYZER</div>
-        <canvas id="player-visualizer" class="player-visualizer"></canvas>
+        <div class="vis-header-tag"><span class="spectrum-name"><i aria-hidden="true"></i> BASS SPECTRUM</span><span id="player-playback-status" role="status">Sẵn sàng phát</span></div>
+        <canvas id="player-visualizer" class="player-visualizer" role="img" aria-label="Phổ âm thanh LED"></canvas>
+        <div class="spectrum-scale" aria-hidden="true"><span>35</span><span>160</span><span>750</span><span>3.5K</span><span>16K</span><b>Hz</b></div>
       </div>
 
       <!-- Title & Artist -->
       <div class="player-meta retro-meta">
         <div class="player-titles-wrap">
+          <span class="player-meta-eyebrow">NOW PLAYING</span>
           <div id="player-title" class="player-song-title">Tên bài hát</div>
           <div id="player-artist" class="player-song-artist">Nghệ sĩ</div>
         </div>
-        <button id="player-btn-fav" class="btn-retro-fav" type="button" aria-label="Favorite">
-          <span class="fav-heart-icon">♥</span>
+        <button id="player-btn-fav" class="btn-retro-fav" type="button" aria-label="Yêu thích">
+          <svg class="ui-icon" aria-hidden="true"><use href="#icon-heart"/></svg>
         </button>
       </div>
 
       <!-- Scrubber -->
       <div class="scrubber-wrap retro-scrubber">
-        <input type="range" id="player-slider" class="scrubber-slider" min="0" max="100" value="0" step="0.1">
+        <input type="range" id="player-slider" class="scrubber-slider" min="0" max="100" value="0" step="0.1" aria-label="Tua bài hát">
         <div class="time-row">
           <span id="player-time-current">0:00</span>
           <span class="retro-stereo-pill">STEREO</span>
@@ -502,48 +548,48 @@
       <!-- Retro Player Controls Bar -->
       <div class="player-controls retro-controls">
         <!-- Shuffle -->
-        <button id="player-btn-shuffle" class="btn-ctrl-retro" type="button" aria-label="Shuffle" title="Trộn bài">
-          <span>🔀</span>
+        <button id="player-btn-shuffle" class="btn-ctrl-retro" type="button" aria-label="Trộn bài" aria-pressed="false" title="Trộn bài">
+          <svg class="ui-icon" aria-hidden="true"><use href="#icon-shuffle"/></svg>
         </button>
 
         <!-- Prev -->
-        <button id="player-btn-prev" class="btn-ctrl-retro" type="button" aria-label="Previous" title="Bài trước">
-          <span>⏮</span>
+        <button id="player-btn-prev" class="btn-ctrl-retro" type="button" aria-label="Bài trước" title="Bài trước">
+          <svg class="ui-icon" aria-hidden="true"><use href="#icon-prev"/></svg>
         </button>
 
         <!-- Retro Green PLAY / PAUSE Button -->
         <button id="player-btn-play" class="btn-retro-play-main" type="button" aria-label="Play">
-          <span id="player-play-icon">▶</span>
+          <span id="player-play-icon"><svg class="ui-icon" aria-hidden="true"><use href="#icon-play"/></svg></span>
         </button>
 
         <!-- Next -->
-        <button id="player-btn-next" class="btn-ctrl-retro" type="button" aria-label="Next" title="Bài tiếp">
-          <span>⏭</span>
+        <button id="player-btn-next" class="btn-ctrl-retro" type="button" aria-label="Bài tiếp theo" title="Bài tiếp">
+          <svg class="ui-icon" aria-hidden="true"><use href="#icon-next"/></svg>
         </button>
 
         <!-- Repeat -->
-        <button id="player-btn-repeat" class="btn-ctrl-retro active" type="button" aria-label="Repeat" title="Lặp lại">
-          <span>🔁</span>
+        <button id="player-btn-repeat" class="btn-ctrl-retro active" type="button" aria-label="Lặp lại" aria-pressed="true" title="Lặp lại danh sách">
+          <svg class="ui-icon" aria-hidden="true"><use href="#icon-repeat"/></svg>
         </button>
       </div>
 
       <!-- Sleek Retro Action Toolbar (Clean 4-pill layout) -->
       <div class="player-smart-bar">
         <button id="btn-player-add-playlist" class="smart-tool-btn" type="button" title="Thêm vào Playlist">
-          <span class="tool-icon">📑</span>
+          <svg class="ui-icon" aria-hidden="true"><use href="#icon-list"/></svg>
           <span class="tool-label">PLAYLIST</span>
         </button>
         <button id="btn-fx-bass" class="smart-tool-btn" type="button" title="Siêu âm trầm">
-          <span class="tool-icon">🔥</span>
+          <svg class="ui-icon" aria-hidden="true"><use href="#icon-bass"/></svg>
           <span class="tool-label" id="bass-mode-text">BASS</span>
         </button>
         <button id="btn-visual-mode" class="smart-tool-btn active" type="button" title="Chế độ LED phổ">
-          <span class="tool-icon">⚡</span>
+          <svg class="ui-icon" aria-hidden="true"><use href="#icon-wave"/></svg>
           <span class="tool-label" id="visual-mode-text">LED</span>
         </button>
         <div class="player-more-wrap">
           <button id="btn-player-more" class="smart-tool-btn more-icon-btn" type="button" title="Tùy chọn khác">
-            <span class="tool-icon">⋯</span>
+            <svg class="ui-icon" aria-hidden="true"><use href="#icon-more"/></svg>
           </button>
           <!-- Floating Retro Popover Menu -->
           <div id="player-more-menu" class="player-more-menu hidden">
@@ -556,6 +602,8 @@
           </div>
         </div>
       </div>
+
+      <div class="player-save-row"><span id="player-source-note">Giai điệu trong bộ sưu tập của bạn.</span><button id="btn-player-save-preview" class="download-btn player-save-button" type="button" hidden><svg class="ui-icon" aria-hidden="true"><use href="#icon-download"/></svg> Tải về</button></div>
 
     </div>
 
@@ -584,9 +632,9 @@
               📦 CÀI ĐẶT BẰNG FILE APK (KHUYÊN DÙNG)
             </div>
             <div style="font-size:0.75rem; color:#166534; margin-bottom:10px; line-height:1.4;">
-              File cài đặt <b>Boxmusic-Pro.apk</b> (chuẩn Android 14 mới nhất). Tải về và cài đặt trực tiếp, hoạt động 100% độc lập!
+              File cài đặt <b>Boxmusic-1.1.4.apk</b> với giao diện Retro Studio mới. Tải về và cài đặt trực tiếp để nghe nhạc offline!
             </div>
-            <a href="downloads/Boxmusic-Pro.apk" download="Boxmusic-Pro.apk" class="btn-retro-install-big" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; font-size:0.8rem; background:#16a34a; border-color:#86efac #14532d #14532d #86efac; color:#fff; font-weight:bold; cursor:pointer;">
+            <a href="downloads/Boxmusic-1.1.4.apk" download="Boxmusic-1.1.4.apk" class="btn-retro-install-big" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px 16px; font-size:0.8rem; background:#16a34a; border-color:#86efac #14532d #14532d #86efac; color:#fff; font-weight:bold; cursor:pointer;">
               <span>📥 TẢI XUỐNG BOXMUSIC-PRO.APK</span>
             </a>
           </div>
@@ -717,7 +765,7 @@
           <!-- 4. Version info -->
           <div class="settings-card-section version-sec">
             <div class="version-row">
-              <span><b>Phiên bản:</b> Boxmusic Pro v1.0.8 (Poco HyperOS Native Island & Pro Toolbar)</span>
+              <span><b>Phiên bản:</b> Boxmusic Pro v1.1.4 · Retro Studio & Playlist</span>
               <span><b>Cơ chế:</b> IndexedDB Persistence + YouTube InnerTube</span>
             </div>
           </div>
@@ -736,9 +784,8 @@
           <button id="btn-close-create-pl" class="win-btn-red" type="button">✕</button>
         </div>
         <div class="retro-modal-body">
-          <div style="font-family:var(--font-pixel); font-size:0.75rem; color:#1e3a8a; margin-bottom:8px;">
-            ĐẶT TÊN PLAYLIST:
-          </div>
+          <div class="create-playlist-illustration" aria-hidden="true">♫ <span>YOUR NEXT GREAT MIX</span></div>
+          <label for="input-playlist-name" class="form-label">Tên playlist</label>
           <input type="text" id="input-playlist-name" class="retro-input" placeholder="Ví dụ: Nhạc Lofi, Gym, Chill..." maxlength="40" autocomplete="off">
           <div class="modal-actions-row" style="margin-top:14px; gap:8px;">
             <button id="btn-cancel-create-pl" class="win-btn-gray" type="button">HỦY</button>
@@ -777,7 +824,7 @@
 
     <!-- RETRO MODAL: PLAYLIST DETAIL / SONGS -->
     <div id="modal-playlist-detail" class="retro-modal-overlay hidden">
-      <div class="retro-modal-box">
+      <div class="retro-modal-box playlist-detail-box">
         <div class="retro-title-bar modal-title-bar">
           <div class="retro-title-text">
             <span>📑</span> <span id="detail-pl-name">PLAYLIST</span>
@@ -785,10 +832,9 @@
           <button id="btn-close-detail-pl" class="win-btn-red" type="button">✕</button>
         </div>
         <div class="retro-modal-body">
+          <div class="playlist-detail-hero"><div id="detail-pl-art" class="playlist-cover" aria-hidden="true"></div><div class="playlist-detail-copy"><span class="eyebrow">YOUR PERSONAL MIXTAPE</span><h2 id="detail-pl-heading">Playlist</h2><p id="detail-pl-count">0 bài hát</p><span id="detail-pl-date" class="detail-date"></span></div></div>
           <div class="detail-pl-header-row">
-            <div>
-              <span id="detail-pl-count" class="badge-tag">0 BÀI</span>
-            </div>
+            <span class="eyebrow">TRACKLIST</span>
             <div class="detail-pl-actions">
               <button id="btn-play-whole-playlist" class="win-btn-primary" type="button">▶ PHÁT TẤT CẢ</button>
               <button id="btn-delete-this-playlist" class="retro-fx-btn danger" type="button" title="Xóa playlist này">🗑️</button>
@@ -798,15 +844,16 @@
             <!-- Dynamically populated -->
           </div>
           <div id="detail-pl-empty" class="empty-state retro-empty" style="display:none; padding:20px 10px;">
-            <div class="empty-title">CHƯA CÓ BÀI HÁT TRONG PLAYLIST</div>
-            <div class="empty-desc">Chạm vào nút <b>📑</b> ở mỗi bài hát trong Thư viện để thêm vào đây!</div>
+            <div class="empty-title">Thêm giai điệu cho bản mix này</div>
+            <div class="empty-desc">Chạm vào nút <b>📑</b> cạnh bài hát trong Thư viện để thêm vào playlist.</div>
+            <button class="studio-button secondary" type="button" id="btn-playlist-goto-library">Chọn nhạc từ thư viện ↗</button>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Toast container -->
-    <div id="toast-container" class="toast-container"></div>
+    <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
 
     <!-- Hidden YouTube Player Container for offline server fallback -->
     <div id="yt-player-wrap" style="position: absolute; width: 200px; height: 200px; left: -9999px; top: -9999px; overflow: hidden; opacity: 0; pointer-events: none;">
@@ -818,8 +865,12 @@
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <!-- Scripts -->
-  <script src="js/db.js?v=1.0.8"></script>
-  <script src="js/player.js?v=1.0.8"></script>
-  <script src="js/app.js?v=1.0.8"></script>
+  <script src="js/db.js?v=1.1.4"></script>
+  <script src="js/visualizer.js?v=1.1.4"></script>
+  <script src="js/player.js?v=1.1.4"></script>
+  <script src="js/playlist-utils.js?v=1.1.4"></script>
+  <script src="js/discovery.js?v=1.1.4"></script>
+  <script src="js/download.js?v=1.1.4"></script>
+  <script src="js/app.js?v=1.1.4"></script>
 </body>
 </html>

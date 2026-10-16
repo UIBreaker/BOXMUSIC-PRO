@@ -2,6 +2,8 @@
 
 Ứng dụng nghe nhạc cá nhân phong cách Retro Pixel OS & Music Box tuyệt đẹp, hỗ trợ cả Web PWA và bản cài đặt Android APK (`Boxmusic-Pro.apk`). Cho phép nghe nhạc 100% offline, tìm kiếm và tải nhạc từ khắp nơi trên thế giới.
 
+**Bản Android mới nhất:** [Boxmusic 1.1.4 — Bass Spectrum](https://github.com/UIBreaker/BOXMUSIC-PRO/releases/tag/v1.1.4) · [Tải APK](https://github.com/UIBreaker/BOXMUSIC-PRO/releases/download/v1.1.4/Boxmusic-1.1.4.apk).
+
 ---
 
 ## ✨ Tính Năng Nổi Bật
@@ -13,15 +15,21 @@
 
 2. **Tìm kiếm và tải nhạc thế giới:**
    - Tìm kiếm bài hát, ca sĩ, giai điệu bất kỳ trên toàn cầu.
-   - Nghe thử trực tuyến trước khi tải.
+   - Nút **Nghe thử** phát trực tuyến trước khi tải; chạm lại để tạm dừng hoặc nghe tiếp, không tự lưu vào thư viện.
    - Nút **Tải về (📥)**: Chuyển toàn bộ dữ liệu âm thanh và ảnh bìa bài hát vào bộ nhớ máy để nghe bất kỳ lúc nào.
+   - Tải nhanh: máy chủ tải tối đa 4 đoạn âm thanh đồng thời khi nguồn hỗ trợ Range, giữ nguyên dữ liệu và chất lượng. Bài hát được lưu ngay khi âm thanh hoàn tất; ảnh bìa bổ sung sau, không làm chậm việc nghe offline.
 
 3. **Nạp nhạc MP3 / MP4 từ máy:**
    - Nút **"+ Thêm MP3/MP4 từ máy"** cho phép chọn trực tiếp các file nhạc (`.mp3`, `.m4a`, `.mp4`, `.wav`) đã có sẵn trên điện thoại hoặc máy tính của bạn.
 
-4. **Giao diện Mobile tối giản & Tinh tế:**
-   - Thiết kế chuẩn Dark Mode hiện đại, tối ưu cho màn hình cảm ứng điện thoại.
+4. **Giao diện Retro Studio trên điện thoại và máy tính:**
+   - Giữ nền kem, xanh cobalt, chữ pixel và cửa sổ OS; bố cục rộng với thanh bên trên desktop, thanh điều hướng dưới trên điện thoại.
+   - Playlist dạng bộ sưu tập với bìa ghép tự động từ ảnh bài hát, số bài thực có trong thư viện, tổng thời lượng và màn chi tiết có ảnh bìa, nghệ sĩ, thứ tự bài.
+   - Tìm playlist tiếng Việt có hoặc không dấu; sắp xếp theo tên, mới nhất hoặc số bài. Hộp thoại hỗ trợ Enter, Escape, Tab và giao diện tôn trọng tùy chọn giảm chuyển động.
    - Thanh mini-player tiện lợi khi lướt và bảng điều khiển Full Player với đĩa xoay nghệ thuật, thanh tua nhạc, trộn bài (Shuffle), lặp lại (Repeat).
+   - Màn hình The Listening Room dùng biểu tượng SVG đồng nhất, thanh tua có tiến độ, trạng thái phát và nút tải trực tiếp khi đang nghe thử.
+   - Trình phát tự co mâm đĩa để vừa chiều cao màn hình, hỗ trợ bố cục ngang, không cần cuộn để tìm nút điều khiển. LED 36 cột được mở rộng, có vạch đỉnh, phản chiếu và hai bảng màu ngọc–vàng–hồng, xanh–tím. Bắt xung bass thực trong dải 35–180 Hz, tăng phản hồi ở tiếng kick và hạ sáng mềm giữa các nhịp.
+   - Hiệu ứng theo thời gian để giữ tốc độ trên màn hình 60/90/120 Hz; dừng vẽ LED khi đóng trình phát, tạm dừng nhạc hoặc đưa ứng dụng ra nền. Tái sử dụng bộ đệm và chỉ đo canvas khi đổi kích thước.
    - Quản lý danh sách yêu thích ❤️ và dung lượng lưu trữ (MB).
 
 ---
@@ -58,6 +66,10 @@ Terminal sẽ hiển thị địa chỉ IP nội bộ cùng **mã QR**.
 
 ## 🛠️ Công Nghệ Sử Dụng
 
-- **Frontend:** HTML5, Modern CSS (Glassmorphism & Dark Mode), Vanilla JavaScript ES6+, Web App Manifest, Service Worker Caching.
+- **Frontend:** HTML5, responsive Retro Studio CSS, Vanilla JavaScript ES6+, Web App Manifest, Service Worker Caching.
 - **Lưu trữ Offline:** IndexedDB API (Lưu file âm thanh dạng Blob + Metadata + Ảnh bìa).
 - **Backend:** Node.js, Express, `yt-search`, `yt-dlp` (Stream audio m4a siêu nhẹ, tốc độ cao).
+
+Kiểm tra logic Playlist và các tệp giao diện cần để chạy offline: `node --test tests/*.test.js`.
+
+Sau khi cập nhật APK, khởi động lại máy chủ bằng `npm start` để bật tải chia đoạn. APK mới vẫn tải được với máy chủ cũ, nhưng chỉ máy chủ mới có phần tăng tốc truyền âm thanh.
